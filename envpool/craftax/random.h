@@ -17,9 +17,8 @@
 
 #include <algorithm>
 #include <array>
-#include <cmath>
 #include <cstdint>
-#include <cstring>
+#include <numeric>
 #include <vector>
 
 namespace craftax {
@@ -64,51 +63,20 @@ inline std::uint32_t Bits(Key key, std::uint32_t index = 0) {
 }
 
 inline float Uniform(Key key, std::uint32_t index = 0) {
-  const std::uint32_t bits = (Bits(key, index) >> 9) | 0x3F800000U;
-  float value;
-  std::memcpy(&value, &bits, sizeof(value));
-  return value - 1.0f;
+  return static_cast<float>(Bits(key, index) >> 9) * 0x1p-23F;
 }
 
 inline int RandInt(Key key, int low, int high, std::uint32_t index = 0) {
-  const auto span = static_cast<std::uint32_t>(std::max(1, high - low));
-  const std::uint32_t half = 65536U % span;
-  const std::uint32_t multiplier = (half * half) % span;
-  const std::uint32_t higher = Bits(Split(key, 0), index);
-  const std::uint32_t lower = Bits(Split(key, 1), index);
-  return low +
-         static_cast<int>(((higher % span) * multiplier + lower % span) % span);
+  const std::uint64_t value =
+      (static_cast<std::uint64_t>(Bits(Split(key, 0), index)) << 32) |
+      Bits(Split(key, 1), index);
+  return low + static_cast<int>(value % std::max(1, high - low));
 }
 
-// The pinned XLA CPU cumulative reduction scans 16-element tiles, then
-// recursively scans tile totals. A sequential sum changes weighted choices
-// near resource/spawn boundaries on larger maps.
-inline std::vector<float> Cumulative(const std::vector<float>& values) {
-  constexpr std::size_t tile = 16;
-  std::vector<float> out(values.size());
-  std::vector<float> totals;
-  for (std::size_t start = 0; start < values.size(); start += tile) {
-    float sum = 0.0f;
-    for (std::size_t i = start; i < std::min(start + tile, values.size());
-         ++i) {
-      sum += values[i];
-      out[i] = sum;
-    }
-    totals.push_back(sum);
-  }
-  if (totals.size() > 1) {
-    const auto prefix = Cumulative(totals);
-    for (std::size_t i = tile; i < out.size(); ++i) {
-      out[i] += prefix[i / tile - 1];
-    }
-  }
-  return out;
-}
-
-// JAX choice(replace=True) samples from a float32 cumulative distribution.
-// Inputs need not sum to one; preserving their scale preserves rounding.
+// Inputs need not sum to one.
 inline int Choice(Key key, const std::vector<float>& weights) {
-  const auto cumulative = Cumulative(weights);
+  std::vector<float> cumulative(weights.size());
+  std::partial_sum(weights.begin(), weights.end(), cumulative.begin());
   const float sample = cumulative.back() * (1.0f - Uniform(key));
   return static_cast<int>(
       std::lower_bound(cumulative.begin(), cumulative.end(), sample) -

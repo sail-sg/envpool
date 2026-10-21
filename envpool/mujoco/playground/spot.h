@@ -502,6 +502,8 @@ class PlaygroundSpotEnvBase : public Env<EnvSpecT>, public PlaygroundMujocoEnv {
       for (int i = 0; i < settle_steps; ++i) {
         mj_step(model_, data_);
       }
+      // Refresh derived reset state after the final integration, as in Go1.
+      mj_forward(model_, data_);
       data_->time = 0.0;
       UpdateGetupObs(/*add_noise=*/true);
     } else if (is_gait_) {

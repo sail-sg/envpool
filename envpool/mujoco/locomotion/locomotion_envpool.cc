@@ -62,6 +62,9 @@ PYBIND11_MODULE(locomotion_envpool, m) {
                 result[py::str(key)] = array;
               }
               result["time"] = data->time;
+              result["throw_in_position"] = sim.ThrowInPosition();
+              result["reference_clip"] = sim.ReferenceClip();
+              result["reference_start"] = sim.ReferenceStart();
               if (include_model) {
                 std::vector<char> bytes(mj_sizeModel(model));
                 mj_saveModel(model, nullptr, bytes.data(), bytes.size());

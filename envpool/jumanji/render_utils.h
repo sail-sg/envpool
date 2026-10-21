@@ -22,6 +22,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <string>
 #include <utility>
 
 namespace jumanji::render {
@@ -248,13 +249,14 @@ inline void DrawNumber(int width, int height, int value, int left, int top,
   if (value < 0) {
     return;
   }
-  if (value < 10) {
-    DrawDigit(width, height, value, left, top, right, bottom, color, rgb);
-    return;
+  const auto digits = std::to_string(value);
+  const int count = digits.size();
+  for (int i = 0; i < count; ++i) {
+    const int x0 = left + i * (right - left) / count;
+    const int x1 = left + (i + 1) * (right - left) / count;
+    DrawDigit(width, height, digits[i] - '0', x0, top, x1 - (count > 1 ? 1 : 0),
+              bottom, color, rgb);
   }
-  const int mid = (left + right) / 2;
-  DrawDigit(width, height, value / 10, left, top, mid - 1, bottom, color, rgb);
-  DrawDigit(width, height, value % 10, mid + 1, top, right, bottom, color, rgb);
 }
 
 }  // namespace jumanji::render

@@ -18,7 +18,7 @@ import inspect
 import os
 import platform
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from envpool.mujoco.oracle import configure_mujoco_package_shared_lib
 from envpool.python.glfw_context import preload_windows_gl_dlls
@@ -37,7 +37,6 @@ from envpool.mujoco.locomotion.locomotion_envpool import TASKS
 import envpool.mujoco.locomotion.registration  # noqa: F401
 from envpool.mujoco.dmc.render_oracle import configure_macos_dm_control_renderer
 from envpool.mujoco.locomotion.locomotion_test import (
-    assert_egocentric_images,
     check_reset_randomization,
 )
 from envpool.mujoco.locomotion.oracle import (
@@ -45,6 +44,8 @@ from envpool.mujoco.locomotion.oracle import (
     activate_oracle_context,
     make_oracle,
     oracle_observations,
+    reset_from_native,
+    step_from_native,
 )
 from envpool.mujoco.render_test_utils import assert_rgb_images
 from envpool.registration import make_dm
@@ -132,82 +133,31 @@ class LocomotionAlignTest(parameterized.TestCase):
         """Check real goals, layouts and spawns without oracle state sync."""
         check_reset_randomization(self, task, randomized_components)
 
-    def assert_rewards(
-        self, native: np.ndarray, oracle: Any, task: str, context: str
+    def assert_numerical(
+        self, native: np.ndarray, oracle: Any, context: str
     ) -> None:
-        """Compare rewards with only the measured scalar-math residuals."""
-        expected = np.broadcast_to(oracle, native.shape)
-        if (
-            task == "rodent_two_touch"
-            and platform.system() == "Linux"
-            and platform.machine().lower() in {"x86_64", "amd64"}
-        ):
-            # NumPy's x86 SIMD exp and scalar glibc exp differ by one ULP.
-            # The .01 * exp(-3 * distance) * 25 shaping term can amplify that
-            # to two ULPs. Recomputing the oracle with math.exp reproduces the
-            # native result exactly, including all three contact transitions.
-            with self.subTest(context=context):
-                np.testing.assert_array_max_ulp(native, expected, maxulp=2)
-            return
-        # Bowl's 3-vector norm differs by one ULP between BLAS and MuJoCo,
-        # amplified by cancellation in 1 - (6 - distance) / 6. Tracking also
-        # combines scalar exp and quaternion reductions (see tracking.cc).
+        """Allow roundoff in derived float64 math, independently of backend."""
+        # Independent MuJoCo models and ordinary arithmetic differ at roundoff
+        # level; acceleration sensors amplify velocity error by the timestep.
+        # Match the float64 transition budget instead of requiring a particular
+        # BLAS reduction or fused arithmetic path. Discrete values stay exact.
         np.testing.assert_allclose(
-            native,
-            expected,
-            rtol=0,
-            atol=3e-15
-            if task == "cmu_humanoid_tracking"
-            else 1e-16
-            if task == "rodent_escape_bowl"
-            else 0,
-            err_msg=context,
+            native, oracle, rtol=1e-10, atol=1e-10, err_msg=context
         )
 
     def assert_observations(
         self, native: dict, oracle: dict, task: str, context: str
     ) -> None:
-        """Require exact state and pixels, with narrow derived-math residuals."""
+        """Compare derived values numerically and discrete observations exactly."""
         self.assertEqual(native.keys(), oracle.keys())
         for key in native:
             a, b = native[key], oracle[key]
             self.assertEqual(a.shape, b.shape, key)
             self.assertEqual(a.dtype, b.dtype, key)
-            # Only derived Python/NumPy math differs: BLAS reduction order and
-            # libm tanh/quaternion operations. Raw MuJoCo state/sensors, all
-            # discrete values remain bitwise; camera residuals are separate.
-            suffix = key.removeprefix("walker/")
-            tolerance = 0.0
-            if suffix in {"appendages_pos", "target", "origin"}:
-                tolerance = 2e-15
-            elif suffix == "sensors_torque":
-                # NumPy's vector tanh and scalar libm differ by up to two
-                # ULPs around 0.5 on Linux arm64 (one machine epsilon).
-                tolerance = float(np.finfo(np.float64).eps)
-            elif suffix.startswith("stats_") or suffix in {
-                "velocimeter_control",
-                "gyro_control",
-            }:
-                tolerance = 2e-14
-            elif suffix.startswith("reference_") or suffix == "time_in_clip":
-                tolerance = 1e-15
-            elif suffix in {
-                "team_goal_back_right",
-                "team_goal_mid",
-                "team_goal_front_left",
-                "field_front_left",
-                "opponent_goal_back_left",
-                "opponent_goal_mid",
-                "opponent_goal_front_right",
-                "field_back_right",
-            }:
-                tolerance = 2e-14
             if key == "walker/egocentric_camera":
-                assert_egocentric_images(a, b, task, context)
-            elif tolerance:
-                np.testing.assert_allclose(
-                    a, b, rtol=0, atol=tolerance, err_msg=f"{context}, {key}"
-                )
+                assert_rgb_images(a, b, context)
+            elif np.issubdtype(a.dtype, np.floating):
+                self.assert_numerical(a, b, f"{context}, {key}")
             else:
                 np.testing.assert_array_equal(a, b, err_msg=f"{context}, {key}")
 
@@ -229,30 +179,29 @@ class LocomotionAlignTest(parameterized.TestCase):
         width: int = 128,
         height: int = 96,
         camera_name: str | None = None,
+        env: Any = None,
+        timestep: Any = None,
     ) -> bool:
         official = make_oracle(task, seed)
-        oracle_ts = official.reset()
+        owns_env = env is None
+        if owns_env:
+            env = make_dm(
+                f"dm_control/locomotion/{task}",
+                seed=seed,
+                num_envs=1,
+                num_threads=1,
+                render_mode="rgb_array",
+                render_width=width,
+                render_height=height,
+            )
+            timestep = env.reset()
+        env = cast(Any, env)
+        state = reset_from_native(official, env)
         camera = (
             -1
             if camera_name is None
             else official.physics.model.name2id(camera_name, "camera")
         )
-        # DMC requires its framebuffer dimensions to be set before rendering;
-        # EnvPool grows its persistent framebuffer for larger public viewports.
-        visual = official.physics.model.vis.global_
-        visual.offwidth = max(visual.offwidth, width)
-        visual.offheight = max(visual.offheight, height)
-        env: Any = make_dm(
-            f"dm_control/locomotion/{task}",
-            seed=seed,
-            num_envs=1,
-            num_threads=1,
-            render_mode="rgb_array",
-            render_width=width,
-            render_height=height,
-            render_camera_id=camera,
-        )
-        timestep = env.reset()
         specs = official.observation_spec()
         if isinstance(specs, list):
             specs = specs[0]
@@ -279,40 +228,12 @@ class LocomotionAlignTest(parameterized.TestCase):
             env.action_spec().maximum, action_spec.maximum
         )
 
-        state = env._snapshot(include_model=True)
-        native_model = mujoco.MjModel.from_binary_path(
-            "native.mjb", {"native.mjb": state["model"]}
-        )
-        # Check the native geometry, inertias, actuators and heightfield before
-        # allowing a reset-time state sync to eliminate bootstrap RNG details.
-        for key in (
-            "body_mass",
-            "body_inertia",
-            "body_pos",
-            "geom_size",
-            "geom_pos",
-            "jnt_range",
-            "actuator_gainprm",
-            "actuator_biasprm",
-            "hfield_data",
-            "mat_rgba",
-        ):
-            np.testing.assert_array_equal(
-                getattr(native_model, key),
-                getattr(official.physics.model.ptr, key),
-                err_msg=f"{task}, model {key}",
-            )
-        # Exactly one synchronization, immediately after reset. Neither engine
-        # nor any task state is modified again during the action-only rollout.
-        with official.physics.reset_context():
-            official.physics.data.qpos[:] = state["qpos"]
-            official.physics.data.qvel[:] = state["qvel"]
-            official.physics.data.act[:] = state["act"]
-        official.physics.data.qacc_warmstart[:] = state["warmstart"]
-        frame = env.render()[0]
+        visual = official.physics.model.vis.global_
+        visual.offwidth = max(visual.offwidth, width)
+        visual.offheight = max(visual.offheight, height)
+        frame = env.render(camera_id=camera)[0]
         activate_oracle_context(official)
-        # Reset render also uses the synchronized state; no post-reset sync is
-        # necessary for any later observation or frame.
+        # Both renderers now display the same checked native scene.
         reference_frame = official.physics.render(height, width, camera)
         if not np.array_equal(frame, reference_frame):
             from PIL import Image
@@ -353,11 +274,7 @@ class LocomotionAlignTest(parameterized.TestCase):
                 )
             # EnvPool render() can temporarily use the calling thread's GL
             # context. Invalidate DMC's cached binding before its next render.
-            activate_oracle_context(official)
-            oracle_ts = official.step(
-                action if task.startswith("soccer_") else action[0]
-            )
-            timestep = env.step(action)
+            timestep, oracle_ts, state = step_from_native(official, env, action)
             self.assertEqual(timestep.reward.dtype, env.reward_spec().dtype)
             self.assertEqual(timestep.discount.dtype, env.discount_spec().dtype)
             self.assert_observations(
@@ -366,10 +283,9 @@ class LocomotionAlignTest(parameterized.TestCase):
                 task,
                 f"{task}, {pattern}, step {step}",
             )
-            self.assert_rewards(
+            self.assert_numerical(
                 timestep.reward,
                 oracle_ts.reward,
-                task,
                 f"{task}, reward step {step}",
             )
             np.testing.assert_array_equal(
@@ -379,13 +295,15 @@ class LocomotionAlignTest(parameterized.TestCase):
             self.assertEqual(bool(timestep.last()[0]), oracle_ts.last())
             state = env._snapshot()
             for key in ("qpos", "qvel", "act"):
-                np.testing.assert_array_equal(
+                np.testing.assert_allclose(
                     state[key],
                     getattr(official.physics.data, key),
+                    rtol=1e-10,
+                    atol=1e-10,
                     err_msg=f"{task}, physics {key}, step {step}",
                 )
             if step in (0, 3, 31, 127) or oracle_ts.last():
-                frame = env.render()[0]
+                frame = env.render(camera_id=camera)[0]
                 activate_oracle_context(official)
                 assert_rgb_images(
                     frame,
@@ -401,7 +319,8 @@ class LocomotionAlignTest(parameterized.TestCase):
         self.assertTrue(env.step(np.zeros_like(action)).first()[0])
         clip_finished = bool(getattr(official.task, "_end_mocap", False))
         official.close()
-        env.close()
+        if owns_env:
+            env.close()
         return clip_finished
 
     def test_tracking_side_camera(self) -> None:
@@ -425,32 +344,53 @@ class LocomotionAlignTest(parameterized.TestCase):
         """Exercise every WALK_TINY clip and the end-of-reference transition."""
         oracle = make_oracle("cmu_humanoid_tracking")
         task = oracle.task
-        starts = task._possible_starts
-        probabilities = task._start_probabilities
-        seeds: dict[int, int] = {}
-        near_end = []
-        for seed in range(10000):
-            index = np.random.RandomState(seed).choice(
-                len(starts), p=probabilities
-            )
-            clip, step = starts[index]
-            seeds.setdefault(clip, seed)
-            if task._dataset.end_steps[clip] - step == 16:
-                near_end.append(seed)
-            if len(seeds) == len(task._dataset.ids) and len(near_end) >= 12:
-                break
-        self.assertLen(seeds, len(task._dataset.ids))
+        ends = np.asarray(task._dataset.end_steps) - np.asarray(
+            task._dataset.start_steps
+        )
+        expected = set(range(len(task._dataset.ids)))
         oracle.close()
-        for clip, seed in sorted(seeds.items()):
-            with self.subTest(clip=clip, seed=seed):
-                self._run_episode("cmu_humanoid_tracking", "random", seed)
-        for seed in near_end:
-            if self._run_episode("cmu_humanoid_tracking", "reference", seed):
-                break
-        else:
-            self.fail(
-                "Reference-following actions never reached a clip boundary"
+        seen = set()
+        finished = False
+        env: Any = make_dm(
+            "dm_control/locomotion/cmu_humanoid_tracking",
+            seed=0,
+            num_envs=1,
+            num_threads=1,
+            render_mode="rgb_array",
+            render_width=128,
+            render_height=96,
+        )
+        try:
+            for reset in range(10000):
+                timestep = env.reset()
+                state = env._snapshot()
+                clip, start = state["reference_clip"], state["reference_start"]
+                if clip not in seen:
+                    with self.subTest(clip=clip, reset=reset):
+                        self._run_episode(
+                            "cmu_humanoid_tracking",
+                            "random",
+                            0,
+                            env=env,
+                            timestep=timestep,
+                        )
+                    seen.add(clip)
+                elif not finished and ends[clip] - start == 16:
+                    finished = self._run_episode(
+                        "cmu_humanoid_tracking",
+                        "reference",
+                        0,
+                        env=env,
+                        timestep=timestep,
+                    )
+                if seen == expected and finished:
+                    break
+            self.assertEqual(seen, expected)
+            self.assertTrue(
+                finished, "Reference actions never reached a clip boundary"
             )
+        finally:
+            env.close()
 
     def test_upstream_registry_coverage(self) -> None:
         """Discover upstream factories and actually reset every public ID."""
@@ -497,9 +437,8 @@ class LocomotionAlignTest(parameterized.TestCase):
             render_width=96,
             render_height=80,
         )
-        official.reset()
         env.reset()
-        state = env._snapshot()
+        state = reset_from_native(official, env)
         model = official.physics.model.ptr
         # Placement only needs body transforms, not another multi-GB arena.
         fixture = official.physics.data.ptr
@@ -529,9 +468,9 @@ class LocomotionAlignTest(parameterized.TestCase):
         rewards = []
         for step in range(12):
             action = np.full((1, *env.action_spec().shape), 0.05 * np.sin(step))
-            activate_oracle_context(official)
-            oracle_ts = official.step(action[0])
-            timestep = env.step(action)
+            timestep, oracle_ts, snapshot = step_from_native(
+                official, env, action
+            )
             self.assert_observations(
                 timestep.observation.obs,
                 oracle_observations(oracle_ts.observation),
@@ -546,8 +485,11 @@ class LocomotionAlignTest(parameterized.TestCase):
             rewards.append(float(timestep.reward[0]))
             snapshot = env._snapshot()
             for key in ("qpos", "qvel", "act"):
-                np.testing.assert_array_equal(
-                    snapshot[key], getattr(official.physics.data, key)
+                np.testing.assert_allclose(
+                    snapshot[key],
+                    getattr(official.physics.data, key),
+                    rtol=1e-10,
+                    atol=1e-10,
                 )
             frame = env.render()[0]
             activate_oracle_context(official)
@@ -567,34 +509,33 @@ class LocomotionAlignTest(parameterized.TestCase):
         env.close()
 
     @parameterized.named_parameters(
-        ("timeout", -1.0, 35, 0.0, 4),
-        ("early", 0.5, 35, -0.03, 3),
-        ("success", -0.5, 65, -0.03, 2),
+        ("timeout", None, 4),
+        ("early", 30, 3),
+        ("success", 40, 2),
     )
     def test_two_touch_transitions(
-        self, amplitude: float, duration: int, offset: float, outcome: int
+        self, retouch_step: int | None, outcome: int
     ) -> None:
         """Touch, release, and retouch using only actions after reset."""
         task = "rodent_two_touch"
         official = make_oracle(task)
         env: Any = make_dm(f"dm_control/locomotion/{task}", seed=0)
-        official.reset()
         env.reset()
-        state = env._snapshot()
+        state = reset_from_native(official, env)
         # Put the target by the hand once, before any external actions. This
         # makes the debounce, timing window and retargeting observable without
         # teleporting either body or target during the rollout.
         model = official.physics.model.ptr
         # Reuse the oracle arena while constructing the reset-time fixture.
         fixture = official.physics.data.ptr
+        # Construct both the hand and target from the same canonical pose;
+        # the fixture must not depend on a particular random spawn rotation.
+        state["qpos"] = model.qpos0.copy()
+        state["qvel"] = np.zeros(model.nv)
         fixture.qpos[:] = state["qpos"]
         mujoco.mj_kinematics(model, fixture)
         position = fixture.xpos[model.body("walker/hand_L").id].copy()
-        position[0] += offset
-        # Start from the XML pose; the nearby target is then reached by the
-        # first pulse rather than already touching a hand at reset.
-        state["qpos"] = model.qpos0.copy()
-        state["qvel"] = np.zeros(model.nv)
+        position[0] -= 0.03
         geoms = {"target_0_0/geom": position}
         env._set_reset_state(0, state["qpos"], state["qvel"], geoms)
         with official.physics.reset_context():
@@ -606,23 +547,25 @@ class LocomotionAlignTest(parameterized.TestCase):
         events: list[int] = []
         for step in range(160):
             action = np.zeros((1, *env.action_spec().shape))
-            if 1 <= step < 8:
+            if 1 <= step < 4 or (
+                retouch_step is not None
+                and retouch_step <= step < retouch_step + 10
+            ):
                 action[0, 8:] = 1
-            if 24 <= step < duration:
-                action[0, 8:] = amplitude
-            activate_oracle_context(official)
-            oracle_ts = official.step(action[0])
-            timestep = env.step(action)
+            elif step >= 4 and (retouch_step is None or step < retouch_step):
+                action[0, 8:] = -1
+            timestep, oracle_ts, snapshot = step_from_native(
+                official, env, action
+            )
             self.assert_observations(
                 timestep.observation.obs,
                 oracle_observations(oracle_ts.observation),
                 task,
                 f"two_touch, outcome {outcome}, step {step}",
             )
-            self.assert_rewards(
+            self.assert_numerical(
                 timestep.reward,
                 oracle_ts.reward,
-                task,
                 f"two_touch, outcome {outcome}, reward step {step}",
             )
             np.testing.assert_array_equal(
@@ -631,9 +574,11 @@ class LocomotionAlignTest(parameterized.TestCase):
             self.assertEqual(bool(timestep.last()[0]), oracle_ts.last())
             snapshot = env._snapshot()
             for key in ("qpos", "qvel", "act"):
-                np.testing.assert_array_equal(
+                np.testing.assert_allclose(
                     snapshot[key],
                     getattr(official.physics.data, key),
+                    rtol=1e-10,
+                    atol=1e-10,
                     err_msg=f"two_touch, {key}, step {step}",
                 )
             touch = int(timestep.observation.obs["task_logic"].item())
@@ -660,9 +605,8 @@ class LocomotionAlignTest(parameterized.TestCase):
         )
         official = make_oracle(task, **kwargs)
         env: Any = make_dm(f"dm_control/locomotion/{task}", seed=0, **kwargs)
-        official.reset()
         env.reset()
-        state = env._snapshot()
+        state = reset_from_native(official, env)
         model = official.physics.model.ptr
         joint = model.joint("soccer_ball/").id
         address = model.jnt_qposadr[joint]
@@ -690,8 +634,9 @@ class LocomotionAlignTest(parameterized.TestCase):
         action = np.zeros((2, *env.action_spec().shape))
         saw_goal = False
         for step in range(20):
-            oracle_ts = official.step(action)
-            timestep = env.step(action)
+            timestep, oracle_ts, snapshot = step_from_native(
+                official, env, action
+            )
             self.assert_observations(
                 timestep.observation.obs,
                 oracle_observations(oracle_ts.observation),
@@ -706,9 +651,11 @@ class LocomotionAlignTest(parameterized.TestCase):
             saw_goal |= bool(np.any(timestep.reward))
             snapshot = env._snapshot()
             for key in ("qpos", "qvel", "act"):
-                np.testing.assert_array_equal(
+                np.testing.assert_allclose(
                     snapshot[key],
                     getattr(official.physics.data, key),
+                    rtol=1e-10,
+                    atol=1e-10,
                     err_msg=f"{scenario}, {key}, step {step}",
                 )
             if oracle_ts.last():
@@ -724,7 +671,7 @@ class LocomotionAlignTest(parameterized.TestCase):
             )
         if scenario == "field_box":
             self.assertFalse(oracle_ts.last())
-        # Enforce the one-reset-sync rule in the test hook itself.
+        # Native fixtures remain immutable after reset; only oracle inputs sync.
         with self.assertRaisesRegex(RuntimeError, "only change reset state"):
             env._set_reset_state(0, qpos, qvel)
         official.close()

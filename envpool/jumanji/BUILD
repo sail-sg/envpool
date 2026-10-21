@@ -69,26 +69,10 @@ pybind_extension(
 
 py_library(
     name = "jumanji",
-    srcs = glob(["_official_render/**/*.py"]) + [
-        "__init__.py",
-        "jumanji_official_render.py",
-        "jumanji_render.py",
-    ],
-    data = glob([
-        "_official_render/**/*.jpeg",
-        "_official_render/**/*.png",
-        "assets/**/*.npy",
-    ]) + [
-        ":jumanji_envpool",
-    ],
+    srcs = ["__init__.py"],
+    data = glob(["assets/**/*.npy"]) + [":jumanji_envpool"],
     imports = ["../.."],
-    deps = [
-        "//envpool/python:api",
-        "//envpool/python:envpool",
-        requirement("matplotlib"),
-        requirement("numpy"),
-        requirement("pillow"),
-    ],
+    deps = ["//envpool/python:api"],
 )
 
 py_library(
@@ -115,6 +99,20 @@ py_test(
     ],
 )
 
+py_library(
+    name = "oracle",
+    testonly = True,
+    srcs = ["oracle.py"],
+    imports = ["../.."],
+    visibility = ["//visibility:public"],
+    deps = [
+        jumanji_oracle_requirement("jax"),
+        jumanji_oracle_requirement("jumanji"),
+        jumanji_oracle_requirement("matplotlib"),
+        jumanji_oracle_requirement("numpy"),
+    ],
+)
+
 py_test(
     name = "jumanji_official_align_test",
     size = "enormous",
@@ -123,6 +121,7 @@ py_test(
     deps = [
         ":jumanji",
         ":jumanji_registration",
+        ":oracle",
         requirement("absl-py"),
         requirement("numpy"),
         jumanji_oracle_requirement("jax"),

@@ -91,19 +91,8 @@ void Simulation::SelectTrackingClip() {
     if (possible_starts_.empty()) {
       throw std::runtime_error("No valid mocap starts");
     }
-    const double probability = 1. / possible_starts_.size();
-    double sum = 0;
-    for (std::size_t i = 0; i < possible_starts_.size(); ++i) {
-      sum += probability;
-      start_cdf_.push_back(sum);
-    }
-    for (double& value : start_cdf_) {
-      value /= sum;
-    }
   }
-  const auto index = std::upper_bound(start_cdf_.begin(), start_cdf_.end(),
-                                      random_.Uniform()) -
-                     start_cdf_.begin();
+  const auto index = random_.Integer(possible_starts_.size());
   const auto [clip, step] = possible_starts_.at(index);
   clip_id_ = clip;
   reference_start_ = reference_step_ = step;

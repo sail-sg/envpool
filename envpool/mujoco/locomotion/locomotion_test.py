@@ -26,37 +26,6 @@ from envpool.mujoco.render_test_utils import assert_rgb_images
 from envpool.registration import make_dm, make_gymnasium
 
 
-def assert_egocentric_images(
-    actual: np.ndarray,
-    expected: np.ndarray,
-    task: str,
-    context: str,
-    *,
-    record_mismatch: bool = True,
-) -> None:
-    """Keep software CGL shadow residuals scoped to the affected cameras."""
-    if task in {
-        "cmu_humanoid_heterogeneous_forage",
-        "cmu_humanoid_maze_forage",
-        "rodent_escape_bowl",
-    }:
-        # Official fixed-state MuJoCo replays show sparse CGL shadow noise.
-        # Share the measured forage-camera budget (peak 100, mean 0.0614)
-        # with the rodent bowl camera, which exhibits the same kind of noise.
-        assert_rgb_images(
-            actual,
-            expected,
-            context,
-            macos_peak_error=128,
-            macos_mean_error=0.1,
-            record_mismatch=record_mismatch,
-        )
-    else:
-        assert_rgb_images(
-            actual, expected, context, record_mismatch=record_mismatch
-        )
-
-
 def assert_observations(
     actual: dict[str, np.ndarray],
     expected: dict[str, np.ndarray],
@@ -65,7 +34,7 @@ def assert_observations(
     *,
     record_mismatch: bool = True,
 ) -> None:
-    """Compare native observations with the existing camera budgets."""
+    """Compare native observations with the shared camera budget."""
     np.testing.assert_equal(sorted(actual), sorted(expected))
     for key, value in actual.items():
         if key != "walker/egocentric_camera":
@@ -73,10 +42,9 @@ def assert_observations(
                 value, expected[key], err_msg=f"{context}, {key}"
             )
     if "walker/egocentric_camera" in actual:
-        assert_egocentric_images(
+        assert_rgb_images(
             actual["walker/egocentric_camera"],
             expected["walker/egocentric_camera"],
-            task,
             f"{task}, {context}",
             record_mismatch=record_mismatch,
         )

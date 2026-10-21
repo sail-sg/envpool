@@ -18,7 +18,7 @@
 #include <string>
 #include <vector>
 
-#include "envpool/mpe2/random.h"
+#include "envpool/utils/random.h"
 #include "third_party/mpe2/tasks.h"
 
 namespace mpe2 {
@@ -64,7 +64,7 @@ class Model {
   std::vector<int> goals;
   int key{0};
   double original_range{1};
-  Random random, respawn_random;
+  envpool::Random random;
 
   Model(const Options& opts, std::uint32_t seed);
   void Reset();

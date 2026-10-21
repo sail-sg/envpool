@@ -206,7 +206,7 @@ class Game {
   bool Near(int block) const;
   bool ClassicSolid(Pos p) const;
   bool ClassicValid(Pos p) const;
-  float Light(int timestep, bool fused = true) const;
+  float Light(int timestep) const;
   void MoveMob(Mob* mob, Pos proposed, int cooldown);
 
   void ClassicWorld(Key rng);

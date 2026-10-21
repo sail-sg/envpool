@@ -38,10 +38,10 @@ def workspace():
     )
     maybe(
         http_file,
-        name = "mpe2_pcg64",
-        sha256 = "2ce9cc9366a9993cfd786a1ee63eaad35d8761c0ff9744ee5508192156f33d4a",
-        urls = ["https://raw.githubusercontent.com/numpy/numpy/v2.5.2/numpy/random/src/pcg64/pcg64.h"],
-        downloaded_file_path = "pcg64.h",
+        name = "numpy_pocketfft_hdronly",
+        sha256 = "50f4ddbe60432325f560c706b6f1c49f9e0949fc7f20ae6499f2299e37d9790c",
+        urls = ["https://raw.githubusercontent.com/mreineck/pocketfft/33ae5dc94c9cdc7f1c78346504a85de87cadaa12/pocketfft_hdronly.h"],
+        downloaded_file_path = "pocketfft_hdronly.h",
     )
     craftax_archive()
     dmc_locomotion_repositories()
@@ -531,7 +531,12 @@ perl -Iperllib -I. macros/macros.pl version.mac 'macros/*.mac' 'output/*.mac'
         http_archive,
         name = "myosuite_source",
         patch_args = ["-p1"],
-        patches = ["//third_party/myosuite:numpy2_scalars.patch"],
+        patches = [
+            "//third_party/myosuite:numpy2_scalars.patch",
+            "//third_party/myosuite:reference_interpolation.patch",
+            "//third_party/myosuite:goalkeeper_physics.patch",
+            "//third_party/myosuite:tabletennis_termination.patch",
+        ],
         sha256 = "9fc2c610c5d71d2640cc75a0ea989c4f864622b49f67d38bfe7f1f6623396257",
         strip_prefix = "myosuite-2.12.2",
         urls = [

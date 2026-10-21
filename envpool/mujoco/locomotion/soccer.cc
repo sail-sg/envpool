@@ -94,6 +94,9 @@ void Simulation::BeforeSoccerStep() {
     qpos[0] = data_->geom_xpos[3 * ball_geom_] * random_.Uniform(.7, .9);
     qpos[1] = data_->geom_xpos[3 * ball_geom_ + 1] * random_.Uniform(.7, .9);
     qpos[2] = .5;
+#ifdef ENVPOOL_TEST
+    throw_in_position_.assign(qpos, qpos + 3);
+#endif
     mju_zero(data_->qvel + model_->jnt_dofadr[ball_joint_], 6);
   }
   goals_.fill(false);

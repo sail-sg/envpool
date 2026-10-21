@@ -27,9 +27,9 @@ from envpool.mpe2 import TASKS
 from envpool.mpe2.oracle import (
     actions_for,
     make_oracle,
-    oracle_actions,
     player_actions,
     render_frame,
+    step_oracle,
     synchronize_reset,
 )
 from envpool.python.seed_test_utils import check_seeded_resets
@@ -120,12 +120,10 @@ class _MPE2Test(absltest.TestCase):
                     if policy is None
                     else policy(oracle.unwrapped)
                 )
-                _, rew, term, trunc, _ = oracle.step(
-                    oracle_actions(oracle, action)
-                )
                 obs, reward, terminated, truncated, info = native.step(
                     player_actions(info, action)
                 )
+                _, rew, term, trunc, _ = step_oracle(oracle, action, info)
                 snapshots.append(info["snapshot"][0].copy())
                 with self.subTest(
                     task=task_id, continuous=continuous, seed=seed, step=step
@@ -270,12 +268,17 @@ class _MPE2Test(absltest.TestCase):
                                 rescaling=rescaling,
                                 step=step,
                             ):
-                                np.testing.assert_array_equal(
-                                    render_frame(native), oracle.render()
+                                # FreeType/SDL alpha blending can quantize glyph
+                                # edges one level apart in the 8-bit image.
+                                np.testing.assert_allclose(
+                                    render_frame(native),
+                                    oracle.render(),
+                                    rtol=0,
+                                    atol=1,
                                 )
                         action = actions_for(native, info, rng)
-                        oracle.step(oracle_actions(oracle, action))
                         *_, info = native.step(player_actions(info, action))
+                        step_oracle(oracle, action, info)
                 finally:
                     native.close()
                     oracle.close()

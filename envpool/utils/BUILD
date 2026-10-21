@@ -34,3 +34,17 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "random",
+    hdrs = ["random.h"],
+)
+
+cc_library(
+    name = "colored_noise",
+    hdrs = ["colored_noise.h"],
+    deps = [
+        ":random",
+        "//third_party/numpy:fft",
+    ],
+)

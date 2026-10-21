@@ -24,13 +24,5 @@ notices. The Warp license and its supplied third-party notices are preserved
 in the vendor license directory. EnvPool's changes to Warp are recorded in
 warp_native.patch; they add static CPU replay and thread-local scratch storage.
 
-Sine and cosine used in physical-state resets retain the pinned CPU oracle's
-rounding: SLEEF commit 5a1d179df9cf652951b59010a2d2075372d67f68 on ARM64
-(Boost Software License 1.0), and the required Intel oneMKL VML routines from
-2024.2.0 on Linux x64 and 2025.2.0 on Windows x64. These routines are linked
-statically and their licenses/notices are included in the corresponding core
-wheel. No additional math runtime DLL, BLAS, or LAPACK solver is bundled for
-this family.
-
 The locally generated motion fixture is for testing only. It is not included
 in either the runtime asset package or the EnvPool wheel.

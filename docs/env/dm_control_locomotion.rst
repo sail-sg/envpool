@@ -119,10 +119,11 @@ expose their upstream state observations. Every task also supports native
    )
    frames = env.render(env_ids=[3, 1])  # (2, 240, 320, 3)
 
-The following comparisons cover every task after four external action steps,
-using one physics-state synchronization immediately after reset. EnvPool is on
-the left and the pinned official environment is on the right. The generator
-checks every displayed image for pixel equality before writing the figures.
+The following comparisons cover every task after four external action steps.
+The official environment starts from checked native scene and physics state;
+EnvPool is on the left and the pinned official environment is on the right.
+The generator checks every displayed image with the same visual error budget
+as the tests before writing the figures.
 
 .. image:: ../_static/render_samples/dmc-locomotion-humanoid.png
    :alt: All CMU humanoid tasks, EnvPool left and official dm_control right
@@ -177,10 +178,10 @@ control step unless the field box is enabled.
 Reproducibility and assets
 --------------------------
 
-Each environment has independent random streams, including the draws that the
-upstream maze and two-touch examples make through NumPy's global random state.
-Resetting another environment cannot change its rollout. Seeds are configured
-when creating the pool, following the normal EnvPool seed API.
+Each environment owns its native random generator. Resetting another
+environment cannot change its rollout. Seeds are configured when creating the
+pool, following the normal EnvPool seed API. Repeated native runs on the same
+build and platform are deterministic; NumPy seed mapping is not part of the API.
 
 On macOS, Apple's CGL/Metal renderer can return slightly different pixels for
 identical model arrays, camera, lights, geometry, and skin vertices and normal
@@ -195,21 +196,28 @@ state. The forage-camera replays measured a maximum channel difference of
 64-by-64 frame; the rodent bowl residual was smaller and affected one pixel.
 These cameras allow a channel difference of 128 and a mean error of ``0.1``
 per frame. Visual settings remain unchanged and errors are never averaged
-over a rollout. Other platforms retain exact RGB comparisons, and native
-dynamics and reward replays remain exact.
+over a rollout. Other platforms retain exact RGB comparisons. Native repeated
+rollouts remain exact on each build and platform.
 
-Oracle reward checks retain only small derived-math residuals: tracking's
-quaternion/exponential reductions, the bowl's distance norm, and, on Linux
-x86-64 only, up to two ULPs in TwoTouch's exponential shaping reward. The
-underlying MuJoCo state and discrete task transitions are checked exactly.
+Oracle tests use the native hidden state already exposed by the test build.
+They check actual layouts, goals, terrain, motion references and ball placements
+before copying those quantities into the official environment. Maze geometry,
+walker inertia and actuator parameters are independently checked. Terrain
+checks compare the radial profile, height distribution and spatial smoothness
+with an independently generated official sample.
 
-On every platform, the oracle builds both pinned MuJoCo and LabMaze's official
-1.0.6 Python binding from source with the same toolchain as EnvPool.
-LabMaze's seeded layouts depend on the C++ standard library's distribution and
-shuffle algorithms, so a published wheel can produce different mazes even on
-the same platform. This aligns the native and oracle builds locally; it does
-not guarantee identical mazes across platforms. No maze or task algorithm is
-patched, and model geometry is checked before reset-state sync.
+Every control step starts from the previously checked native physics state,
+including simulation time. Float64 comparisons use ``rtol=atol=1e-10`` for
+transitions and derived sensors, including acceleration.
+Both implementations then step independently, comparing observations, rewards,
+physics and discrete transitions before the next copy. Goal resampling and
+Soccer restarts occur only when the official task independently triggers them;
+only checked sampled positions and poses are copied. The tests also retain
+native reset randomization and uninterrupted deterministic rollouts.
+
+The oracle uses the shared pinned MuJoCo engine and the official LabMaze Python
+package. Matching compiler-specific random draws or NumPy sampling algorithms
+is unnecessary.
 
 Official XML, skins, textures, and LabMaze 1.0.6 sources are fetched at build
 time. The needed texture styles, model assets, motion clips, and license

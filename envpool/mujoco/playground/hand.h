@@ -275,6 +275,10 @@ class PlaygroundHandEnvBase : public Env<EnvSpecT>, public PlaygroundMujocoEnv {
         spec.config["aero_action_scale4"_], spec.config["aero_action_scale5"_],
         spec.config["aero_action_scale6"_],
     };
+    // The official controller defines these parameters as float32.
+    for (auto& scale : aero_action_scale_) {
+      scale = F32(scale);
+    }
     InitModelIds();
     const int history_len = spec.config["history_len"_];
     obs_history_.assign(

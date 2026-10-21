@@ -144,19 +144,37 @@ class JumanjiRegistryTest(parameterized.TestCase):
                 finally:
                     env.close()
 
-    def test_render_cache_handles_positional_recv_reset(self) -> None:
-        """Checks render works after positional recv reset."""
-        env = make_gymnasium(
-            "Game2048-v1", num_envs=1, seed=0, render_mode="rgb_array"
+    @parameterized.parameters(*_OFFICIAL_JUMANJI_ORACLE_IDS)
+    def test_async_render_matches_current_native_state(
+        self, task_id: str
+    ) -> None:
+        """Send/recv and reordered render selections show the same live scene."""
+        sync = make_gymnasium(
+            task_id, num_envs=3, seed=7, render_mode="rgb_array"
         )
+        async_env = make_gymnasium(
+            task_id, num_envs=3, seed=7, render_mode="rgb_array"
+        )
+        selection = np.asarray([2, 0, 1], dtype=np.int32)
+        sync.action_space.seed(29)
         try:
-            env.async_reset()
-            _, info = env.recv(True)
-            self.assertEqual(info["env_id"].tolist(), [0])
-            frame = env.render(env_ids=np.asarray([0], dtype=np.int32))
-            _assert_render_batch(frame, 1)
+            sync.reset()
+            async_env.async_reset()
+            async_env.recv(True)
+            for _ in range(16):
+                expected = sync.render(env_ids=selection)
+                actual = async_env.render(env_ids=selection)
+                _assert_render_batch(actual, 3)
+                np.testing.assert_array_equal(actual, expected)
+                action = np.stack([
+                    sync.action_space.sample() for _ in range(3)
+                ])
+                sync.step(action)
+                async_env.send(action[selection], env_id=selection)
+                async_env.recv()
         finally:
-            env.close()
+            sync.close()
+            async_env.close()
 
 
 if __name__ == "__main__":

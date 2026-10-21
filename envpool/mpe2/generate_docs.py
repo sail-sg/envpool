@@ -21,9 +21,9 @@ from envpool.mpe2 import TASKS
 from envpool.mpe2.oracle import (
     actions_for,
     make_oracle,
-    oracle_actions,
     player_actions,
     render_frame,
+    step_oracle,
     synchronize_reset,
 )
 from envpool.registration import make_gymnasium
@@ -48,8 +48,8 @@ def main() -> None:
             rng = np.random.default_rng(23)
             for _ in range(12):
                 actions = actions_for(native, info, rng)
-                oracle.step(oracle_actions(oracle, actions))
                 *_, info = native.step(player_actions(info, actions))
+                step_oracle(oracle, actions, info)
             x, y = index % 2 * panel_width, index // 2 * panel_height
             draw.text((x + 10, y + 5), task_id, font=font, fill="#17212b")
             for column, (label, frame) in enumerate((

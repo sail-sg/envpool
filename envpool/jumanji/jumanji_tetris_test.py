@@ -16,19 +16,30 @@
 from __future__ import annotations
 
 import numpy as np
-from absl.testing import absltest
+from absl.testing import absltest, parameterized
 
 import envpool.jumanji.registration  # noqa: F401
 from envpool.registration import make_gymnasium
 
 
-class JumanjiTetrisTest(absltest.TestCase):
+class JumanjiTetrisTest(parameterized.TestCase):
     """Checks native Tetris transitions."""
 
-    def test_drop_square_piece(self) -> None:
-        """Checks dropping the square piece updates the board."""
+    @parameterized.named_parameters(
+        ("square", 2, 2, 0, 2, 2),
+        ("horizontal_line_reaches_floor", 4, 1, 1, 1, 4),
+    )
+    def test_drop_piece(
+        self,
+        rows: int,
+        cols: int,
+        rotation: int,
+        landed_rows: int,
+        landed_cols: int,
+    ) -> None:
+        """Drop pieces, including a one-row rotated piece, onto the floor."""
         square = np.zeros((4, 4), dtype=np.int32)
-        square[:2, :2] = 1
+        square[:rows, :cols] = 1
         env = make_gymnasium(
             "Tetris-v0",
             num_envs=1,
@@ -39,22 +50,24 @@ class JumanjiTetrisTest(absltest.TestCase):
         try:
             obs, _ = env.reset()
             np.testing.assert_array_equal(
-                obs["tetromino"][0, :2, :2],
-                np.ones((2, 2), dtype=obs["tetromino"].dtype),
+                obs["tetromino"][0, :rows, :cols],
+                np.ones((rows, cols), dtype=obs["tetromino"].dtype),
             )
             self.assertTrue(bool(obs["action_mask"][0, 0, 0]))
-            self.assertFalse(bool(obs["action_mask"][0, 0, 9]))
+            self.assertFalse(
+                bool(obs["action_mask"][0, rotation, 11 - landed_cols])
+            )
 
             obs, reward, terminated, truncated, _ = env.step(
-                np.asarray([[0, 0]], dtype=np.int32)
+                np.asarray([[rotation, 0]], dtype=np.int32)
             )
             self.assertAlmostEqual(float(reward[0]), 0.0)
             self.assertFalse(bool(terminated[0]))
             self.assertFalse(bool(truncated[0]))
             self.assertEqual(int(obs["step_count"][0]), 0)
             np.testing.assert_array_equal(
-                obs["grid"][0, 8:10, 0:2],
-                np.ones((2, 2), dtype=obs["grid"].dtype),
+                obs["grid"][0, -landed_rows:, :landed_cols],
+                np.ones((landed_rows, landed_cols), dtype=obs["grid"].dtype),
             )
             self.assertTrue(bool(obs["action_mask"][0, 0, 0]))
 

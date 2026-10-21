@@ -43,7 +43,6 @@ constexpr int kNumGhosts = 4;
 constexpr int kNumPowerUps = 4;
 constexpr int kNumPellets = 318;
 constexpr int kTimeLimit = 1000;
-constexpr int kReplaySteps = 32;
 constexpr std::array<std::array<int, 2>, 5> kMoves = {
     {{{-1, 0}}, {{0, -1}}, {{1, 0}}, {{0, 1}}, {{0, 0}}}};  // NOLINT
 
@@ -104,24 +103,14 @@ inline PelletLocations ParsePellets(const std::string& text) {
 class PacManEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict(
-        "pacman_grid"_.Bind(std::string("")),
-        "pacman_player_location"_.Bind(std::string("")),
-        "pacman_pellet_locations"_.Bind(std::string("")),
-        "pacman_ghost_locations"_.Bind(std::string("")),
-        "pacman_power_up_locations"_.Bind(std::string("")),
-        "pacman_action_mask"_.Bind(std::string("")),
-        "pacman_frightened_state_time"_.Bind(0),
-        "pacman_initial_score"_.Bind(0),
-        "pacman_replay_pellet_locations"_.Bind(std::string("")),
-        "pacman_replay_player_locations"_.Bind(std::string("")),
-        "pacman_replay_ghost_locations"_.Bind(std::string("")),
-        "pacman_replay_power_up_locations"_.Bind(std::string("")),
-        "pacman_replay_frightened_state_time"_.Bind(std::string("")),
-        "pacman_replay_action_mask"_.Bind(std::string("")),
-        "pacman_replay_score"_.Bind(std::string("")),
-        "pacman_replay_rewards"_.Bind(std::string("")),
-        "pacman_replay_done"_.Bind(std::string("")));
+    return MakeDict("pacman_grid"_.Bind(std::string("")),
+                    "pacman_player_location"_.Bind(std::string("")),
+                    "pacman_pellet_locations"_.Bind(std::string("")),
+                    "pacman_ghost_locations"_.Bind(std::string("")),
+                    "pacman_power_up_locations"_.Bind(std::string("")),
+                    "pacman_action_mask"_.Bind(std::string("")),
+                    "pacman_frightened_state_time"_.Bind(0),
+                    "pacman_initial_score"_.Bind(0));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -134,7 +123,8 @@ class PacManEnvFns {
                     "obs:frightened_state_time"_.Bind(Spec<int>({})),
                     "obs:pellet_locations"_.Bind(Spec<int>({318, 2})),
                     "obs:action_mask"_.Bind(Spec<bool>({5}, {false, true})),
-                    "obs:score"_.Bind(Spec<int>({})));
+                    "obs:score"_.Bind(Spec<int>({})),
+                    "info:ghost_actions"_.Bind(Spec<int>({4}, {0, 4})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -161,24 +151,11 @@ class PacManEnv : public Env<PacManEnvSpec>, public RenderableEnv {
   pacman::GhostLocations configured_ghost_locations_{};
   pacman::PowerUpLocations configured_power_up_locations_{};
   std::array<bool, 5> configured_action_mask_{};
-  std::array<int, pacman::kReplaySteps * pacman::kNumPellets * 2>
-      replay_pellet_locations_{};
-  std::array<int, pacman::kReplaySteps * 2> replay_player_locations_{};
-  std::array<int, pacman::kReplaySteps * pacman::kNumGhosts * 2>
-      replay_ghost_locations_{};
-  std::array<int, pacman::kReplaySteps * pacman::kNumPowerUps * 2>
-      replay_power_up_locations_{};
-  std::array<int, pacman::kReplaySteps> replay_frightened_state_time_{};
-  std::array<bool, pacman::kReplaySteps * 5> replay_action_mask_{};
-  std::array<int, pacman::kReplaySteps> replay_score_{};
-  std::array<float, pacman::kReplaySteps> replay_rewards_{};
-  std::array<bool, pacman::kReplaySteps> replay_done_{};
   std::array<int, pacman::kNumPellets> pellet_row_{};
   std::array<int, pacman::kNumPellets> pellet_col_{};
   bool use_configured_grid_;
   bool use_configured_pellets_;
   bool use_configured_action_mask_;
-  bool use_replay_;
   int player_row_{1};
   int player_col_{1};
   int configured_player_row_{1};
@@ -207,36 +184,11 @@ class PacManEnv : public Env<PacManEnvSpec>, public RenderableEnv {
                 spec.config["pacman_power_up_locations"_])),
         configured_action_mask_(
             parse::CsvArray<bool, 5>(spec.config["pacman_action_mask"_])),
-        replay_pellet_locations_(
-            parse::CsvArray<int,
-                            pacman::kReplaySteps * pacman::kNumPellets * 2>(
-                spec.config["pacman_replay_pellet_locations"_], -1)),
-        replay_player_locations_(parse::CsvArray<int, pacman::kReplaySteps * 2>(
-            spec.config["pacman_replay_player_locations"_])),
-        replay_ghost_locations_(
-            parse::CsvArray<int, pacman::kReplaySteps * pacman::kNumGhosts * 2>(
-                spec.config["pacman_replay_ghost_locations"_])),
-        replay_power_up_locations_(
-            parse::CsvArray<int,
-                            pacman::kReplaySteps * pacman::kNumPowerUps * 2>(
-                spec.config["pacman_replay_power_up_locations"_])),
-        replay_frightened_state_time_(
-            parse::CsvArray<int, pacman::kReplaySteps>(
-                spec.config["pacman_replay_frightened_state_time"_])),
-        replay_action_mask_(parse::CsvArray<bool, pacman::kReplaySteps * 5>(
-            spec.config["pacman_replay_action_mask"_])),
-        replay_score_(parse::CsvArray<int, pacman::kReplaySteps>(
-            spec.config["pacman_replay_score"_])),
-        replay_rewards_(parse::CsvArray<float, pacman::kReplaySteps>(
-            spec.config["pacman_replay_rewards"_])),
-        replay_done_(parse::CsvArray<bool, pacman::kReplaySteps>(
-            spec.config["pacman_replay_done"_])),
         use_configured_grid_(!spec.config["pacman_grid"_].empty()),
         use_configured_pellets_(
             !spec.config["pacman_pellet_locations"_].empty()),
         use_configured_action_mask_(
             !spec.config["pacman_action_mask"_].empty()),
-        use_replay_(!spec.config["pacman_replay_pellet_locations"_].empty()),
         configured_frightened_state_time_(
             spec.config["pacman_frightened_state_time"_]),
         configured_score_(spec.config["pacman_initial_score"_]) {
@@ -338,12 +290,6 @@ class PacManEnv : public Env<PacManEnvSpec>, public RenderableEnv {
   }
 
   void Step(const Action& action) override {
-    if (use_replay_ && step_count_ < pacman::kReplaySteps) {
-      ++step_count_;
-      done_ = replay_done_[step_count_ - 1];
-      WriteState(replay_rewards_[step_count_ - 1]);
-      return;
-    }
     const int action_id = std::clamp(static_cast<int>(action["action"_]), 0, 4);
     int next_row =
         Wrap(player_row_ + pacman::kMoves[action_id][0], pacman::kRows);
@@ -471,14 +417,12 @@ class PacManEnv : public Env<PacManEnvSpec>, public RenderableEnv {
         } else {
           const int closest =
               *std::min_element(distances.begin(), distances.end());
-          std::vector<int> candidates;
+          std::vector<float> candidates(4);
           for (int action = 0; action < 4; ++action) {
-            if (distances[action] == closest) {
-              candidates.push_back(action);
-            }
+            candidates[action] = distances[action] == closest ? 1.0f : 0.0f;
           }
-          choice = candidates[std::uniform_int_distribution<int>(
-              0, static_cast<int>(candidates.size()) - 1)(gen_)];
+          choice = std::discrete_distribution<int>(candidates.begin(),
+                                                   candidates.end())(gen_);
         }
       }
       ghost_actions_[ghost] = choice;
@@ -517,71 +461,34 @@ class PacManEnv : public Env<PacManEnvSpec>, public RenderableEnv {
     }
     state["obs:player_locations.y"_] = player_col_;
     state["obs:player_locations.x"_] = player_row_;
-    if (use_replay_ && step_count_ > 0 && step_count_ <= pacman::kReplaySteps) {
-      state["obs:player_locations.y"_] =
-          replay_player_locations_[(step_count_ - 1) * 2];
-      state["obs:player_locations.x"_] =
-          replay_player_locations_[(step_count_ - 1) * 2 + 1];
-    }
+
     for (int ghost = 0; ghost < pacman::kNumGhosts; ++ghost) {
-      const int replay = ((step_count_ - 1) * pacman::kNumGhosts + ghost) * 2;
-      const bool use_replay_step =
-          use_replay_ && step_count_ > 0 && step_count_ <= pacman::kReplaySteps;
-      state["obs:ghost_locations"_](ghost, 0) =
-          use_replay_step ? replay_ghost_locations_[replay]
-                          : ghost_locations_[ghost * 2];
-      state["obs:ghost_locations"_](ghost, 1) =
-          use_replay_step ? replay_ghost_locations_[replay + 1]
-                          : ghost_locations_[ghost * 2 + 1];
+      state["info:ghost_actions"_][ghost] = ghost_actions_[ghost];
+      state["obs:ghost_locations"_](ghost, 0) = ghost_locations_[ghost * 2];
+      state["obs:ghost_locations"_](ghost, 1) = ghost_locations_[ghost * 2 + 1];
     }
     for (int power_up = 0; power_up < pacman::kNumPowerUps; ++power_up) {
-      const int replay =
-          ((step_count_ - 1) * pacman::kNumPowerUps + power_up) * 2;
-      const bool use_replay_step =
-          use_replay_ && step_count_ > 0 && step_count_ <= pacman::kReplaySteps;
       state["obs:power_up_locations"_](power_up, 0) =
-          use_replay_step ? replay_power_up_locations_[replay]
-                          : power_up_locations_[power_up * 2];
+          power_up_locations_[power_up * 2];
       state["obs:power_up_locations"_](power_up, 1) =
-          use_replay_step ? replay_power_up_locations_[replay + 1]
-                          : power_up_locations_[power_up * 2 + 1];
+          power_up_locations_[power_up * 2 + 1];
     }
     state["obs:frightened_state_time"_] = frightened_state_time_;
     for (int pellet = 0; pellet < pacman::kNumPellets; ++pellet) {
-      const bool use_replay_step =
-          use_replay_ && step_count_ > 0 && step_count_ <= pacman::kReplaySteps;
-      state["obs:pellet_locations"_](pellet, 0) =
-          use_replay_step
-              ? replay_pellet_locations_
-                    [((step_count_ - 1) * pacman::kNumPellets + pellet) * 2]
-              : pellet_row_[pellet];
-      state["obs:pellet_locations"_](pellet, 1) =
-          use_replay_step
-              ? replay_pellet_locations_
-                    [((step_count_ - 1) * pacman::kNumPellets + pellet) * 2 + 1]
-              : pellet_col_[pellet];
+      state["obs:pellet_locations"_](pellet, 0) = pellet_row_[pellet];
+      state["obs:pellet_locations"_](pellet, 1) = pellet_col_[pellet];
     }
     for (int action = 0; action < 5; ++action) {
       const int row = player_row_ + pacman::kMoves[action][0];
       const int col = player_col_ + pacman::kMoves[action][1];
-      if (use_replay_ && step_count_ > 0 &&
-          step_count_ <= pacman::kReplaySteps) {
-        state["obs:action_mask"_][action] =
-            replay_action_mask_[(step_count_ - 1) * 5 + action];
-      } else if (use_configured_action_mask_ && step_count_ == 0) {
+      if (use_configured_action_mask_ && step_count_ == 0) {
         state["obs:action_mask"_][action] = configured_action_mask_[action];
       } else {
         state["obs:action_mask"_][action] =
             action != 4 && GhostCellOpen(row, col);
       }
     }
-    if (use_replay_ && step_count_ > 0 && step_count_ <= pacman::kReplaySteps) {
-      state["obs:frightened_state_time"_] =
-          replay_frightened_state_time_[step_count_ - 1];
-      state["obs:score"_] = replay_score_[step_count_ - 1];
-    } else {
-      state["obs:score"_] = score_;
-    }
+    state["obs:score"_] = score_;
     state["reward"_] = reward;
   }
 };

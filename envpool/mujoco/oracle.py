@@ -97,7 +97,8 @@ def configure_mujoco_package_shared_lib(*, include_linux: bool = False) -> None:
     """Use the identical source-built engine in macOS/Windows official oracles.
 
     Existing Linux suites retain their pip-engine baseline. New suites can
-    opt into the source-built engine for bitwise stepping, with the shared
+    opt into the source-built engine to isolate task behavior from engine-build
+    differences, with the shared
     library declared explicitly in their Bazel data dependencies.
     """
     system = platform.system()

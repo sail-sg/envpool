@@ -178,7 +178,7 @@ class Manipulation : public Task {
     const auto& target_range = cfg_.at("target_position_range");
     int i = 0;
     for (const auto* axis : {"x", "y", "z"}) {
-      command[i] = sim_.Sample(target_range.at(axis), true) + sim_.origin[i];
+      command[i] = sim_.Uniform(target_range.at(axis)) + sim_.origin[i];
       ++i;
     }
     const auto& object_range = cfg_.at("object_pose_range");
@@ -186,10 +186,10 @@ class Manipulation : public Task {
       Vec3 pos;
       i = 0;
       for (const auto* axis : {"x", "y", "z"}) {
-        pos[i] = sim_.Sample(object_range.at(axis), true) + sim_.origin[i];
+        pos[i] = sim_.Uniform(object_range.at(axis)) + sim_.origin[i];
         ++i;
       }
-      const float yaw = sim_.Sample(object_range.at("yaw"));
+      const float yaw = sim_.Uniform(object_range.at("yaw"));
       const auto& entity = sim_.entities.at(name);
       sim_.WritePose(entity, pos, Euler(0, 0, yaw));
       sim_.WriteVelocity(entity, {}, {});

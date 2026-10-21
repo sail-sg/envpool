@@ -16,8 +16,46 @@
 
 import ctypes
 import importlib
+import os
 import platform
+import subprocess
+import sys
 from typing import Any, ClassVar
+
+
+def configure_linux_mujoco_gl() -> None:
+    """Select a usable Linux GL backend before importing MuJoCo bindings."""
+    if platform.system() != "Linux":
+        return
+    if os.environ.get("MUJOCO_GL"):
+        if os.environ["MUJOCO_GL"] == "egl":
+            os.environ.setdefault("EGL_PLATFORM", "surfaceless")
+        return
+    for backend in ("egl", "osmesa"):
+        env = dict(os.environ)
+        env["MUJOCO_GL"] = backend
+        if backend == "egl":
+            env.setdefault("EGL_PLATFORM", "surfaceless")
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                (
+                    "import mujoco; "
+                    "ctx = mujoco.GLContext(1, 1); "
+                    "ctx.make_current(); "
+                    "ctx.free()"
+                ),
+            ],
+            env=env,
+            check=False,
+            capture_output=True,
+        )
+        if result.returncode == 0:
+            os.environ["MUJOCO_GL"] = backend
+            if backend == "egl":
+                os.environ.setdefault("EGL_PLATFORM", "surfaceless")
+            return
 
 
 def configure_macos_mujoco_renderer() -> None:
@@ -104,6 +142,8 @@ def configure_macos_mujoco_renderer() -> None:
             except cgl.CGLError:
                 return False
             if not pixel_format or num_pixel_formats.value == 0:
+                if pixel_format:
+                    cgl.CGLReleasePixelFormat(pixel_format)
                 return False
             self._pixel_format = pixel_format
             return True
@@ -130,7 +170,7 @@ def configure_macos_mujoco_renderer() -> None:
             self.free()
 
     gl_context.GLContext = _CglContext
-    mujoco.gl_context.GLContext = _CglContext
+    mujoco.GLContext = _CglContext
     mujoco_cgl.GLContext = _CglContext
     classic_renderer.gl_context.GLContext = _CglContext
 

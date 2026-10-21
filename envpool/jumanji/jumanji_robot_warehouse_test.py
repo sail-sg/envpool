@@ -32,9 +32,9 @@ class JumanjiRobotWarehouseTest(absltest.TestCase):
             num_envs=1,
             seed=0,
             render_mode="rgb_array",
-            robot_warehouse_render_agent_x="0,3,6,9",
-            robot_warehouse_render_agent_y="0,0,0,0",
-            robot_warehouse_render_agent_direction="1,1,1,1",
+            robot_warehouse_initial_agent_x="0,3,6,9",
+            robot_warehouse_initial_agent_y="0,0,0,0",
+            robot_warehouse_initial_agent_direction="1,1,1,1",
         )
         try:
             obs, _ = env.reset()

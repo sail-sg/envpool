@@ -19,6 +19,9 @@ load("//third_party/myosuite:oracle_requirements.bzl", "oracle_requirement")
 
 exports_files([
     "numpy2_scalars.patch",
+    "reference_interpolation.patch",
+    "goalkeeper_physics.patch",
+    "tabletennis_termination.patch",
     "oracle_requirements.txt",
     "myosuite_source.BUILD",
     "simhive_source.BUILD",

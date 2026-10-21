@@ -167,7 +167,7 @@ void Scene::SoccerBall(bool humanoid, bool field_box) {
 
 void Scene::Soccer(const TaskConfig& task, int team_size, bool field_box,
                    bool keep_aspect_ratio, bool disable_contacts,
-                   RandomState* random) {
+                   envpool::Random* random) {
   const bool humanoid = task.walker == Walker::kCmu2019;
   std::array<double, 2> minimum{32, 24};
   std::array<double, 2> maximum{48, 36};
@@ -177,15 +177,10 @@ void Scene::Soccer(const TaskConfig& task, int team_size, bool field_box,
     maximum = {std::sqrt(350. * team_size * 2 / .75) / 2,
                std::sqrt(350. * team_size * 2 * .75) / 2};
   }
-  // Soccer.Task calls the arena hook explicitly, then Composer calls the root
-  // entity hook. Both resizes consume RNG, although only the second is
-  // compiled.
-  for (int hook = 0; hook < 2; ++hook) {
-    const double x = random->Uniform();
-    const double y = keep_aspect_ratio ? x : random->Uniform();
-    pitch_size = {minimum[0] + x * (maximum[0] - minimum[0]),
-                  minimum[1] + y * (maximum[1] - minimum[1])};
-  }
+  const double x = random->Uniform();
+  const double y = keep_aspect_ratio ? x : random->Uniform();
+  pitch_size = {minimum[0] + x * (maximum[0] - minimum[0]),
+                minimum[1] + y * (maximum[1] - minimum[1])};
   goal_size = humanoid ? std::array<double, 3>{1.22 / 2, 3.66 / 2, 1.22 / 2}
                        : std::array<double, 3>{
                              (32. / 6) / 2, pitch_size[1] * .33, (32. / 6) / 2};

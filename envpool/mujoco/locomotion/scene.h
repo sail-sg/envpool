@@ -28,7 +28,7 @@
 #include <utility>
 #include <vector>
 
-#include "envpool/mujoco/locomotion/random.h"
+#include "envpool/utils/random.h"
 #include "labmaze/cc/random_maze.h"
 #include "pugixml.hpp"
 
@@ -82,15 +82,15 @@ class Scene {
   pugi::xml_node World() { return Child(Root(), "worldbody"); }
   pugi::xml_node Asset() { return Child(Root(), "asset"); }
   void LoadArena(const std::string& name, double timestep);
-  void Corridor(const TaskConfig& task, RandomState* random);
+  void Corridor(const TaskConfig& task, envpool::Random* random);
   void Floor(double size, bool outdoor = false);
-  void MazeArena(const TaskConfig& task, RandomState* random);
-  void AddTargets(const TaskConfig& task, RandomState* random);
+  void MazeArena(const TaskConfig& task, envpool::Random* random);
+  void AddTargets(const TaskConfig& task, envpool::Random* random);
   void Bowl();
   void TwoTouchTarget();
   void Soccer(const TaskConfig& task, int team_size, bool field_box,
               bool keep_aspect_ratio, bool disable_contacts,
-              RandomState* random);
+              envpool::Random* random);
   void AddWalker(Walker walker, const std::string& prefix, int player = -1,
                  bool red = false);
   std::string Xml() const;
@@ -104,7 +104,6 @@ class Scene {
   std::string maze_entities, maze_variations;
   std::array<double, 2> pitch_size{}, field_size{};
   std::array<double, 3> goal_size{};
-  const auto& VirtualFiles() const { return virtual_files_; }
 
  private:
   enum class RootJoint : std::uint8_t { kFixed, kFree, kSlides };
@@ -124,7 +123,6 @@ class Scene {
   std::map<std::string, std::vector<unsigned char>> virtual_files_;
   std::unique_ptr<deepmind::labmaze::RandomMaze> maze_;
   std::array<int, 2> target_colors_{0, 1};
-  bool maze_initialized_{false};
 };
 
 }  // namespace mujoco_locomotion

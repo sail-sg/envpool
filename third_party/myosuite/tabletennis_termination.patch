@@ -1,0 +1,14 @@
+--- a/myosuite/envs/myo/myochallenge/tabletennis_v0.py
++++ b/myosuite/envs/myo/myochallenge/tabletennis_v0.py
+@@ -272,6 +272,10 @@
+             return 1
+         elif solved:
+             return 1
+-        elif evaluate_pingpong_trajectory(self.contact_trajectory) in [0, 2, 3]:
++        elif evaluate_pingpong_trajectory(self.contact_trajectory) in (
++            ContactTrajIssue.OWN_HALF,
++            ContactTrajIssue.NO_PADDLE,
++            ContactTrajIssue.DOUBLE_TOUCH,
++        ):
+             return 1
+         return 0

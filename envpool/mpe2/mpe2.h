@@ -95,11 +95,9 @@ class MPE2EnvFns {
         "info:players.benchmark_size"_.Bind(Spec<int>({-1})));
 #ifdef ENVPOOL_TEST
     return ConcatDict(
-        common,
-        MakeDict("info:snapshot"_.Bind(Spec<double>(
-                     {(o.Players() + o.Landmarks()) * (10 + o.Communication()) +
-                      3 * o.Players() + 2})),
-                 "info:respawn_rng"_.Bind(Spec<std::uint64_t>({6}))));
+        common, MakeDict("info:snapshot"_.Bind(Spec<double>(
+                    {(o.Players() + o.Landmarks()) * (10 + o.Communication()) +
+                     3 * o.Players() + 2}))));
 #else
     return common;
 #endif
@@ -234,11 +232,8 @@ class MPE2Env : public Env<MPE2EnvSpec<Continuous>>, public RenderableEnv {
     }
 #ifdef ENVPOOL_TEST
     auto snapshot = model_.Snapshot();
-    auto rng = model_.respawn_random.State();
     std::copy(snapshot.begin(), snapshot.end(),
               static_cast<double*>(state["info:snapshot"_].Data()));
-    std::copy(rng.begin(), rng.end(),
-              static_cast<std::uint64_t*>(state["info:respawn_rng"_].Data()));
 #endif
   }
 };

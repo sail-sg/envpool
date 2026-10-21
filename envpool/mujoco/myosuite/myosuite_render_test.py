@@ -16,12 +16,8 @@
 from __future__ import annotations
 
 import importlib
-import json
 import os
 import platform
-import subprocess
-import sys
-import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
@@ -29,6 +25,13 @@ from typing import Any
 import numpy as np
 from absl.testing import absltest
 
+from envpool.mujoco.myosuite.oracle import (
+    run_oracle_probe,
+    sampled_state_from_info,
+)
+from envpool.mujoco.myosuite.oracle import (
+    sync_state_from_info as _sync_state_from_info,
+)
 from envpool.python.glfw_context import preload_windows_gl_dlls
 
 if platform.system() == "Windows":
@@ -158,78 +161,6 @@ _MAX_RENDER_MEAN_ABS_DIFF = 24.0
 _MAX_RENDER_BLOCK_MEAN_ABS_DIFF = 24.0
 _MAX_RENDER_LARGE_MISMATCH_RATIO = 0.50
 _LARGE_RENDER_DELTA = 32
-_SYNC_STATE_KEYS = (
-    "target_jnt_value",
-    "baoding_goal_parameters",
-    "chase_task",
-    "qpos0",
-    "qvel0",
-    "act0",
-    "qacc0",
-    "qacc_warmstart0",
-    "ctrl",
-    "site_pos",
-    "site_quat",
-    "site_size",
-    "site_rgba",
-    "body_pos",
-    "body_quat",
-    "body_mass",
-    "geom_pos",
-    "geom_quat",
-    "geom_size",
-    "geom_rgba",
-    "geom_friction",
-    "geom_aabb",
-    "geom_rbound",
-    "geom_contype",
-    "geom_conaffinity",
-    "geom_type",
-    "geom_condim",
-    "hfield_data",
-    "mocap_pos",
-    "mocap_quat",
-    "fatigue_ma",
-    "fatigue_mr",
-    "fatigue_mf",
-    "fatigue_tl",
-)
-_SYNC_STATE_SIZES = {
-    "target_jnt_value": "nq",
-    "baoding_goal_parameters": "five",
-    "chase_task": "one",
-    "qpos0": "nq",
-    "qvel0": "nv",
-    "act0": "na",
-    "qacc0": "nv",
-    "qacc_warmstart0": "nv",
-    "ctrl": "nu",
-    "site_pos": "nsite3",
-    "site_quat": "nsite4",
-    "site_size": "nsite3",
-    "site_rgba": "nsite4",
-    "body_pos": "nbody3",
-    "body_quat": "nbody4",
-    "body_mass": "nbody",
-    "geom_pos": "ngeom3",
-    "geom_quat": "ngeom4",
-    "geom_size": "ngeom3",
-    "geom_rgba": "ngeom4",
-    "geom_friction": "ngeom3",
-    "geom_aabb": "ngeom6",
-    "geom_rbound": "ngeom",
-    "geom_contype": "ngeom",
-    "geom_conaffinity": "ngeom",
-    "geom_type": "ngeom",
-    "geom_condim": "ngeom",
-    "hfield_data": "nhfielddata",
-    "mocap_pos": "nmocap3",
-    "mocap_quat": "nmocap4",
-    "fatigue_ma": "nu",
-    "fatigue_mr": "nu",
-    "fatigue_mf": "nu",
-    "fatigue_tl": "nu",
-}
 
 
 def _render_shard_task_ids(task_ids: tuple[str, ...]) -> tuple[str, ...]:
@@ -277,64 +208,11 @@ _SHARDED_NATIVE_RENDER_TASK_IDS = _render_shard_task_ids(
 )
 
 
-def _oracle_probe_path() -> Path:
-    runfiles = Path(os.environ["TEST_SRCDIR"])
-    workspace = os.environ.get("TEST_WORKSPACE", "envpool")
-    launcher_names: tuple[str, ...] = (
-        "myosuite_oracle_probe",
-        "myosuite_oracle_probe.exe",
-    )
-    logical_suffixes = (
-        tuple(f"envpool/mujoco/{launcher}" for launcher in launcher_names)
-        + launcher_names
-    )
-    manifest = os.environ.get("RUNFILES_MANIFEST_FILE")
-    if manifest:
-        with Path(manifest).open(encoding="utf-8") as f:
-            for line in f:
-                logical, _, physical = line.rstrip("\n").partition(" ")
-                logical = logical.replace("\\", "/")
-                if any(logical.endswith(suffix) for suffix in logical_suffixes):
-                    candidate = Path(physical or logical)
-                    if candidate.is_file():
-                        return candidate
-    candidates = [
-        runfiles / workspace / "envpool/mujoco" / launcher
-        for launcher in launcher_names
-    ]
-    if sys.platform == "win32":
-        candidates.extend(
-            runfiles.parent / launcher for launcher in launcher_names
-        )
-    for candidate in candidates:
-        if candidate.is_file():
-            return candidate
-    for launcher in launcher_names:
-        for match in runfiles.rglob(launcher):
-            if match.is_file():
-                return match
-    raise RuntimeError(
-        f"could not locate myosuite_oracle_probe under {runfiles}"
-    )
-
-
-def _oracle_probe_cmd() -> list[str]:
-    path = _oracle_probe_path()
-    if sys.platform == "win32" and path.suffix.lower() != ".exe":
-        return [sys.executable, str(path)]
-    return [str(path)]
-
-
 def _oracle_trace(
     task_ids: tuple[str, ...],
     trace_plan: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
-    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as out:
-        out_path = Path(out.name)
-    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as plan:
-        plan_path = Path(plan.name)
-    plan_path.write_text(json.dumps(trace_plan, sort_keys=True))
-    cmd = _oracle_probe_cmd() + [
+    args = [
         "--mode",
         "trace",
         "--render",
@@ -348,75 +226,10 @@ def _oracle_trace(
         "3",
         "--seed",
         "3",
-        "--out",
-        str(out_path),
-        "--trace_plan",
-        str(plan_path),
     ]
     for task_id in task_ids:
-        cmd.extend(["--task_id", task_id])
-    env = os.environ.copy()
-    env["ROBOHIVE_VERBOSITY"] = "SILENT"
-    try:
-        try:
-            result = subprocess.run(
-                cmd,
-                check=False,
-                capture_output=True,
-                env=env,
-                text=True,
-            )
-        except OSError as exc:
-            raise RuntimeError(
-                f"MyoSuite oracle probe failed to start\ncmd: {' '.join(cmd)}"
-            ) from exc
-        if result.returncode != 0:
-            raise RuntimeError(
-                "MyoSuite oracle probe failed\n"
-                f"cmd: {' '.join(cmd)}\n"
-                f"stdout:\n{result.stdout}\n"
-                f"stderr:\n{result.stderr}"
-            )
-        return json.loads(out_path.read_text())["tasks"]
-    finally:
-        out_path.unlink(missing_ok=True)
-        plan_path.unlink(missing_ok=True)
-
-
-def _sync_state_from_info(info: dict[str, Any]) -> dict[str, Any]:
-    dims = {
-        "one": 1,
-        "five": 5,
-        "nq": int(np.asarray(info["model_nq"]).ravel()[0]),
-        "nv": int(np.asarray(info["model_nv"]).ravel()[0]),
-        "na": int(np.asarray(info["model_na"]).ravel()[0]),
-        "nu": int(np.asarray(info["model_nu"]).ravel()[0]),
-        "nsite": int(np.asarray(info["model_nsite"]).ravel()[0]),
-        "nbody": int(np.asarray(info["model_nbody"]).ravel()[0]),
-        "ngeom": int(np.asarray(info["model_ngeom"]).ravel()[0]),
-        "nhfielddata": int(np.asarray(info["model_nhfielddata"]).ravel()[0]),
-        "nmocap": int(np.asarray(info["model_nmocap"]).ravel()[0]),
-    }
-    dims.update({
-        "nsite3": dims["nsite"] * 3,
-        "nsite4": dims["nsite"] * 4,
-        "nbody3": dims["nbody"] * 3,
-        "nbody4": dims["nbody"] * 4,
-        "ngeom3": dims["ngeom"] * 3,
-        "ngeom4": dims["ngeom"] * 4,
-        "ngeom6": dims["ngeom"] * 6,
-        "nmocap3": dims["nmocap"] * 3,
-        "nmocap4": dims["nmocap"] * 4,
-    })
-    sync_state = {}
-    for key in _SYNC_STATE_KEYS:
-        if key not in info:
-            continue
-        size = dims[_SYNC_STATE_SIZES[key]]
-        sync_state[key] = (
-            np.asarray(info[key][0], dtype=np.float64).ravel()[:size].tolist()
-        )
-    return sync_state
+        args.extend(["--task_id", task_id])
+    return run_oracle_probe(args, trace_plan=trace_plan)["tasks"]
 
 
 def _render(env: Any) -> np.ndarray:
@@ -497,19 +310,24 @@ def _envpool_trace_record(
         actions: list[list[float]] = []
         reset_before_step: list[bool] = []
         sync_states = [_sync_state_from_info(info)]
+        sampled_states = []
         action = _midpoint_action(env)
         for _ in range(3):
             actions.append(action.tolist())
             *_, info = env.step(action[None, :])
             frames.append(_render(env)[0])
             step_info = info
+            sampled_states.append(sampled_state_from_info(info))
             elapsed_step = int(np.asarray(step_info["elapsed_step"]).ravel()[0])
             reset_before_step.append(elapsed_step == 0)
-            sync_states.append(_sync_state_from_info(step_info))
+            sync_states.append(
+                _sync_state_from_info(step_info) if elapsed_step == 0 else {}
+            )
         plan = {
             "actions": actions,
             "reset_before_step": reset_before_step,
             "sync_states": sync_states,
+            "sampled_states": sampled_states,
         }
         return frames, plan
     finally:

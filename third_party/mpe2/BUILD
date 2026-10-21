@@ -36,18 +36,9 @@ genrule(
     tools = [":generate_metadata"],
 )
 
-genrule(
-    name = "pcg_header",
-    srcs = ["@mpe2_pcg64//file"],
-    outs = ["pcg64.h"],
-    cmd = "cp $< $@",
-    cmd_bat = 'copy /Y "$<" "$@" >NUL',
-)
-
 cc_library(
     name = "metadata_headers",
     hdrs = [
         ":metadata",
-        ":pcg_header",
     ],
 )

@@ -109,7 +109,8 @@ class PlaygroundMujocoEnv : public RenderableEnv {
   void RenderFresh(int width, int height, int camera_id, unsigned char* rgb) {
 #ifdef _WIN32
     envpool::mujoco::OffscreenRenderer renderer(camera_policy_);
-    renderer.Render(model_, data_, width, height, camera_id, rgb);
+    renderer.Render(model_, data_, width, height, camera_id, rgb, nullptr,
+                    nullptr, /*update_camera_first=*/true);
 #else
     if (renderer_ == nullptr) {
       renderer_ = std::make_unique<envpool::mujoco::OffscreenRenderer>(
@@ -117,7 +118,8 @@ class PlaygroundMujocoEnv : public RenderableEnv {
           /*share_cgl_context=*/false,
           /*prefer_offline_cgl_context=*/false, /*resize_offscreen=*/true);
     }
-    renderer_->Render(model_, data_, width, height, camera_id, rgb);
+    renderer_->Render(model_, data_, width, height, camera_id, rgb, nullptr,
+                      nullptr, /*update_camera_first=*/true);
 #endif
   }
 

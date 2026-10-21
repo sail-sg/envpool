@@ -34,34 +34,6 @@ import warnings
 from pathlib import Path
 from typing import Any
 
-# MyoSuite projects normalized muscle actions through np.exp(float32). NumPy's
-# optional x86 SIMD kernels and its scalar kernel differ by single-ULP amounts,
-# so pin the oracle helper to the portable baseline before NumPy is imported.
-_NUMPY_X86_BASELINE_FEATURE_MASK = (
-    "X86_V3",
-    "X86_V4",
-    "AVX",
-    "AVX2",
-    "FMA3",
-    "F16C",
-    "SSE42",
-    "SSE41",
-    "POPCNT",
-    "SSSE3",
-    "AVX512F",
-    "AVX512CD",
-    "AVX512_SKX",
-    "AVX512_CLX",
-    "AVX512_CNL",
-    "AVX512_ICL",
-    "AVX512_SPR",
-)
-if platform.machine().lower() in {"amd64", "x86_64"}:
-    os.environ.setdefault(
-        "NPY_DISABLE_CPU_FEATURES",
-        ",".join(_NUMPY_X86_BASELINE_FEATURE_MASK),
-    )
-
 import numpy as np
 
 from envpool.mujoco.oracle import (
@@ -78,8 +50,6 @@ from envpool.python.glfw_context import preload_windows_gl_dlls
 
 if platform.system() == "Windows":
     preload_windows_gl_dlls(strict=True)
-
-_CGL_FIRST_FRAME_SETTLE_PASSES = 4
 
 
 def _configure_linux_mujoco_renderer(render: bool) -> None:
@@ -242,6 +212,8 @@ def _space_report(task_ids: list[str]) -> dict[str, Any]:
         try:
             tasks[task_id] = {
                 "action_shape": list(env.action_space.shape),
+                "action_dtype": str(env.action_space.dtype),
+                "observation_dtype": str(env.observation_space.dtype),
                 "max_episode_steps": int(spec.max_episode_steps),
                 "observation_shape": list(env.observation_space.shape),
             }
@@ -371,7 +343,7 @@ def _state_report(env: Any) -> dict[str, Any]:
         "actuator_force": _jsonable_array(data.actuator_force),
         "actuator_length": _jsonable_array(data.actuator_length),
         "actuator_velocity": _jsonable_array(data.actuator_velocity),
-        "ctrl": _jsonable_array(data.ctrl),
+        "ctrl": _jsonable_array(env.robot.mj_data.ctrl),
         "geom_xpos": _jsonable_array(data.geom_xpos),
         "geom_xmat": _jsonable_array(data.geom_xmat),
         "geom_rgba": _jsonable_array(model.geom_rgba),
@@ -498,17 +470,98 @@ def _sync_baoding_goal_from_envpool_reset_state(
     env.counter = 0
 
 
-def _sync_chasetag_hidden_state(env: Any, state: dict[str, Any]) -> None:
-    if not all(hasattr(env, attr) for attr in ("current_task", "opponent")):
+def _sync_npc_parameters(env: Any, state: dict[str, Any]) -> None:
+    npc = getattr(env, "opponent", getattr(env, "goalkeeper", None))
+    if npc is None:
         return
-    task_type = type(env.current_task)
-    if hasattr(task_type, "CHASE"):
-        env.current_task = task_type(int(state["chase_task"][0]))
-    opponent = env.opponent
-    opponent.opponent_policy = "stationary"
-    opponent.opponent_vel = np.zeros((2,), dtype=np.float64)
-    if hasattr(opponent, "chase_velocity"):
-        opponent.chase_velocity = 1.0
+    if hasattr(env, "current_task"):
+        env.current_task = type(env.current_task)(int(state["chase_task"][0]))
+    policy, speed, _ = state["npc_parameters"]
+    policies = (
+        "static_stationary",
+        "stationary",
+        "random",
+        "repeller",
+        "chase_player",
+        "block_ball",
+    )
+    if hasattr(env, "goalkeeper"):
+        npc.goalkeeper_policy = policies[int(policy)]
+        npc.block_velocity = speed
+        npc.goalkeeper_vel = np.zeros(2)
+    else:
+        npc.opponent_policy = policies[int(policy)]
+        npc.chase_velocity = speed
+        npc.opponent_vel = np.zeros(2)
+
+
+def _sync_sampled_state(env: Any, state: dict[str, Any]) -> None:
+    """Transfer checked sampled goals/commands, never evolved body state.
+
+    The oracle still integrates NPC motion and physics, and computes all
+    observations, rewards and episode events. Native noise generation is
+    checked separately; its sample sequence is not an oracle contract.
+    """
+    if "random_reference" in state:
+        from myosuite.logger.reference_motion import ReferenceStruct
+
+        ref = env.ref
+        assert ref.type.name == "RANDOM"
+        values = np.asarray(state["random_reference"], dtype=np.float64)
+        fields = {}
+        offset = 0
+        for key in ("robot", "robot_vel", "object"):
+            bounds = ref.reference[key]
+            count = bounds.shape[1]
+            value = values[offset : offset + count].copy()
+            assert np.all(value >= bounds[0]) and np.all(value <= bounds[1]), (
+                key
+            )
+            fields[key] = value
+            offset += count
+        assert offset == values.size
+        ref.get_reference = lambda time: ReferenceStruct(
+            time=time,
+            **fields,
+            robot_init=ref.reference["robot_init"],
+            object_init=ref.reference["object_init"],
+        )
+    if "npc_velocity" not in state:
+        return
+    npc = getattr(env, "opponent", getattr(env, "goalkeeper", None))
+    assert npc is not None
+    velocity = np.asarray(state["npc_velocity"], dtype=np.float64)
+    assert velocity.shape == (2,) and np.all(np.isfinite(velocity))
+    soccer = hasattr(env, "goalkeeper")
+    policy = npc.goalkeeper_policy if soccer else npc.opponent_policy
+    if policy == "random":
+        limit = (
+            npc.block_velocity
+            if soccer
+            else max(map(abs, npc.random_vel_range))
+        )
+        assert np.all(np.abs(velocity) <= limit)
+        npc.random_movement = lambda: velocity.copy()
+    elif policy == "repeller":
+        pose = npc.get_opponent_pose()
+        repellers = npc.get_repellers()
+        near = repellers[
+            np.linalg.norm(repellers - pose[:2], axis=1) < npc.DIST_INFLUENCE
+        ]
+        # Away from the random fallback/equilibrium branches, also verify the
+        # native command against the unchanged upstream repeller policy.
+        if len(near) and np.all(np.abs(pose[:2] - near.mean(axis=0)) > 0.1):
+            expected = type(npc).repeller_policy(npc)
+            np.testing.assert_allclose(
+                velocity, expected, rtol=1e-10, atol=1e-10
+            )
+        assert (
+            npc.repeller_vel_range[0]
+            <= velocity[0]
+            <= npc.repeller_vel_range[1]
+        )
+        assert abs(velocity[1]) == 1
+        npc.repeller_policy = lambda: velocity.copy()
 
 
 def _sync_fatigue_hidden_state(env: Any, state: dict[str, Any]) -> None:
@@ -519,6 +572,50 @@ def _sync_fatigue_hidden_state(env: Any, state: dict[str, Any]) -> None:
     _assign_sync_array(state, "fatigue_mr", fatigue._MR)
     _assign_sync_array(state, "fatigue_mf", fatigue._MF)
     _assign_sync_array(state, "fatigue_tl", fatigue.TL)
+
+
+def _sync_collision_meshes(model: Any, state: dict[str, Any]) -> None:
+    """Share contact-face order only after verifying equivalent geometry."""
+    keys = (
+        "mesh_polymap",
+        "mesh_polynormal",
+        "mesh_polyvert",
+        "mesh_polyvertadr",
+        "mesh_polyvertnum",
+    )
+    native = {
+        key: np.asarray(state[key]).reshape(getattr(model, key).shape)
+        for key in keys
+    }
+
+    def polygons(values: dict[str, Any]) -> list[tuple[int, ...]]:
+        vertices = values["mesh_polyvert"]
+        return [
+            tuple(sorted(vertices[int(start) : int(start + count)]))
+            for start, count in zip(
+                values["mesh_polyvertadr"],
+                values["mesh_polyvertnum"],
+                strict=False,
+            )
+        ]
+
+    official = {key: getattr(model, key) for key in keys}
+    native_keys, official_keys = polygons(native), polygons(official)
+    native_order = sorted(range(len(native_keys)), key=native_keys.__getitem__)
+    official_order = sorted(
+        range(len(official_keys)), key=official_keys.__getitem__
+    )
+    assert [native_keys[i] for i in native_order] == [
+        official_keys[i] for i in official_order
+    ], "different collision mesh polygons"
+    np.testing.assert_allclose(
+        native["mesh_polynormal"][native_order],
+        official["mesh_polynormal"][official_order],
+        rtol=0,
+        atol=1e-12,
+    )
+    for key in keys:
+        getattr(model, key)[:] = native[key]
 
 
 def _sync_to_envpool_reset_state(env: Any, state: dict[str, Any]) -> np.ndarray:
@@ -553,6 +650,7 @@ def _sync_to_envpool_reset_state(env: Any, state: dict[str, Any]) -> np.ndarray:
         _assign_sync_array(state, "mocap_pos", data.mocap_pos)
         _assign_sync_array(state, "mocap_quat", data.mocap_quat)
 
+    _sync_collision_meshes(model, state)
     qpos = _state_array(state, "qpos0", data.qpos.shape)
     qvel = _state_array(state, "qvel0", data.qvel.shape)
     act = _state_array(state, "act0", data.act.shape) if model.na > 0 else None
@@ -571,14 +669,38 @@ def _sync_to_envpool_reset_state(env: Any, state: dict[str, Any]) -> np.ndarray:
         size = np.asarray(env.target_jnt_value).size
         env.target_jnt_value = np.asarray(state["target_jnt_value"][:size])
     _sync_baoding_goal_from_envpool_reset_state(env, state)
-    _sync_chasetag_hidden_state(env, state)
+    _sync_npc_parameters(env, state)
+    _sync_sampled_state(env, state)
     _sync_fatigue_hidden_state(env, state)
-    obs = env.get_obs()
+    if hasattr(env, "start_bid") and hasattr(env, "goal_bid"):
+        # Bimanual caches its sampled platform positions outside MuJoCo.
+        env.start_pos = model.body_pos[env.start_bid].copy()
+        env.goal_pos = model.body_pos[env.goal_bid].copy()
     _assign_sync_array(state, "qacc0", data.qacc)
     _assign_sync_array(state, "qacc_warmstart0", data.qacc_warmstart)
+    # Robot advances its own MjData. Updating only the observation copy lets
+    # get_obs() immediately overwrite the synchronized pose with the old reset.
+    mujoco.mj_copyData(env.robot.mj_data, model, data)
+    obs = env.get_obs()
     if hasattr(env, "last_ctrl"):
         env.last_ctrl = data.ctrl.copy()
     return obs
+
+
+def _sync_step_physics(env: Any, state: dict[str, Any]) -> None:
+    """Start a checked transition from native state, retaining task/controller state.
+
+    The previous oracle result is recorded before this copy. This avoids
+    accumulating harmless contact/integration drift across different models;
+    the next qpos/qvel/activation and all public outputs are checked anew.
+    """
+    import mujoco
+
+    for data in (env.mj_data, env.robot.mj_data):
+        for key, value in state.items():
+            getattr(data, key)[:] = value
+        mujoco.mj_forward(env.mj_model, data)
+        data.qacc_warmstart[:] = state["qacc_warmstart"]
 
 
 def _trace_info(info: dict[str, Any]) -> dict[str, Any]:
@@ -606,16 +728,6 @@ def _render_frame(env: Any, width: int, height: int, camera_id: int) -> Any:
         height=height,
         camera_id=camera_id,
     )
-    if platform.system() == "Darwin" and not getattr(
-        renderer, "_envpool_cgl_first_render_done", False
-    ):
-        renderer._envpool_cgl_first_render_done = True
-        for _ in range(_CGL_FIRST_FRAME_SETTLE_PASSES):
-            frame = renderer.render_offscreen(
-                width=width,
-                height=height,
-                camera_id=camera_id,
-            )
     return frame
 
 
@@ -692,6 +804,8 @@ def _trace_report(
         planned_actions = task_plan.get("actions")
         planned_resets = task_plan.get("reset_before_step", [])
         planned_sync_states = task_plan.get("sync_states", [])
+        sampled_states = task_plan.get("sampled_states", [])
+        step_physics = task_plan.get("step_physics", [])
         env = gym.make(task_id)
         try:
             reset = env.reset(seed=seed)
@@ -723,6 +837,15 @@ def _trace_report(
                 "actions": [],
                 "infos": [],
                 "obs": [_jsonable_array(obs)],
+                "observation_dtype": str(np.asarray(obs).dtype),
+                "obs_fields": [
+                    (
+                        key,
+                        int(np.asarray(unwrapped.obs_dict[key]).size),
+                        np.asarray(unwrapped.obs_dict[key]).dtype.kind in "biu",
+                    )
+                    for key in unwrapped.obs_keys
+                ],
                 "reset_state": _state_report(unwrapped),
                 "rewards": [],
                 "states": [],
@@ -758,7 +881,15 @@ def _trace_report(
                     trace["truncated"].append(False)
                     trace["infos"].append({})
                 else:
-                    step = env.step(action)
+                    # Both sides receive identical float32-representable
+                    # action values. Evaluate the reference at double precision
+                    # rather than reproduce NumPy's float32 intermediate
+                    # rounding in native muscle and robotic control code.
+                    if step_id < len(step_physics):
+                        _sync_step_physics(unwrapped, step_physics[step_id])
+                    if step_id < len(sampled_states):
+                        _sync_sampled_state(unwrapped, sampled_states[step_id])
+                    step = env.step(action.astype(np.float64))
                     obs = step[0]
                     trace["obs"].append(_jsonable_array(obs))
                     trace["rewards"].append(float(step[1]))
@@ -782,6 +913,10 @@ def _trace_report(
                             )
                         )
                     )
+                if planned_actions is None and (
+                    trace["terminated"][-1] or trace["truncated"][-1]
+                ):
+                    break
             if render:
                 trace["frames"] = frames
             tasks[task_id] = trace
@@ -790,6 +925,85 @@ def _trace_report(
         finally:
             env.close()
     return {"tasks": tasks, "version": official_myosuite.__version__}
+
+
+def _reference_interpolation_report() -> dict[str, Any]:
+    """Exercise the pinned reference interpolator at endpoints and midpoints."""
+    _import_official()
+    from myosuite.logger.reference_motion import ReferenceMotion
+
+    motion = ReferenceMotion({
+        "time": np.array([2.0, 4.0, 6.0]),
+        "robot": np.array([[0.0, 2.0], [4.0, 6.0], [8.0, 10.0]]),
+        "robot_vel": np.array([[1.0, 3.0], [5.0, 7.0], [9.0, 11.0]]),
+        "object": np.array([
+            [0.0, 2.0, 4.0, 1.0, 0.0, 0.0, 0.0],
+            [4.0, 6.0, 8.0, 1.0, 0.0, 0.0, 0.0],
+            [8.0, 10.0, 12.0, 1.0, 0.0, 0.0, 0.0],
+        ]),
+    })
+    frames = [motion.get_reference(t) for t in (2.0, 3.0, 4.0, 5.0, 6.0)]
+    return {
+        key: [getattr(frame, key).tolist() for frame in frames]
+        for key in ("robot", "robot_vel", "object")
+    }
+
+
+def _challenge_regressions_report() -> dict[str, Any]:
+    """Exercise the patched oracle's physical keeper and rally termination."""
+    _, _, gym = _import_official()
+    from myosuite.envs.myo.myochallenge import tabletennis_v0 as tabletennis
+
+    commanded, physical = [], []
+    for seed in range(8):
+        keeper = gym.make("myoChallengeSoccerP2-v0", seed=seed)
+        try:
+            _, _info = keeper.reset()
+            env = keeper.unwrapped
+            commands, positions = [], []
+            for step in range(5):
+                if step:
+                    keeper.step(np.zeros(keeper.action_space.shape, np.float32))
+                commands.append(env.mj_data.mocap_pos[0].copy().tolist())
+                positions.append(
+                    env.robot.mj_data.body("goalkeeper").xpos.copy().tolist()
+                )
+            commanded.append(commands)
+            physical.append(positions)
+        finally:
+            keeper.close()
+
+    rally = gym.make("myoChallengeTableTennisP0-v0")
+    outcomes = []
+    try:
+        env = rally.unwrapped
+        labels = (
+            tabletennis.PingpongContactLabels.PADDLE,
+            tabletennis.PingpongContactLabels.OWN,
+            tabletennis.PingpongContactLabels.OPPONENT,
+        )
+        for masks in (
+            (0, 2, 2, 0, 1, 1, 0),
+            (0, 2, 2, 0, 1, 1, 0, 4),
+            (0, 4),
+            (1, 0, 1),
+            (2, 0, 2),
+            (2, 2, 2),
+            (1, 0, 4, 1),
+        ):
+            env.obs_dict["time"] = np.array([0.0])
+            env.contact_trajectory = [
+                {label for bit, label in enumerate(labels) if mask & (1 << bit)}
+                for mask in masks
+            ]
+            result = tabletennis.evaluate_pingpong_trajectory(
+                env.contact_trajectory
+            )
+            solved = result is None
+            outcomes.append([solved, bool(env._get_done(0.8, solved))])
+    finally:
+        rally.close()
+    return {"commanded": commanded, "physical": physical, "rallies": outcomes}
 
 
 def main() -> None:
@@ -803,6 +1017,8 @@ def main() -> None:
             "rollout",
             "trace",
             "reset_randomization",
+            "reference_interpolation",
+            "challenge_regressions",
         ),
         required=True,
     )
@@ -835,7 +1051,11 @@ def main() -> None:
         else None
     )
 
-    if args.mode == "reset_randomization":
+    if args.mode == "challenge_regressions":
+        report = _challenge_regressions_report()
+    elif args.mode == "reference_interpolation":
+        report = _reference_interpolation_report()
+    elif args.mode == "reset_randomization":
         report = _reset_randomization_report(args.task_id)
     elif args.mode == "space":
         report = _space_report(args.task_id)

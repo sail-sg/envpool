@@ -434,6 +434,64 @@ tasks; and the corresponding normal, sarcopenia, fatigue, and
 reafferentation variants exposed by upstream.
 
 
+Correctness Validation
+----------------------
+
+All 398 registered tasks are checked over complete native episodes using the
+same external actions. The oracle starts each step from the native pre-step
+joint positions, velocities, muscle activation, and solver warm start. The
+resulting physics, observations, controls, rewards, and episode events are
+compared before the next state copy. These are synchronized transition checks,
+not uninterrupted
+cross-implementation trajectories. Native multi-step determinism and reset
+randomization are tested separately without oracle state copies.
+
+Numeric observations retain EnvPool's MuJoCo float64 interface, which represents
+the official float32 observations without narrowing. Observation bounds remain
+unbounded: the upstream generic [-10, 10] box does not contain real force and
+velocity observations.
+
+The initial synchronization also shares compiled collision-face ordering after
+checking that the polygon vertices and normal vectors describe the same geometry.
+MuJoCo's C++ mesh compiler can order those faces differently across builds,
+which changes contact trajectories. Model geometry is synchronized only at reset;
+expected outputs are never injected into native stepping.
+
+The pinned source includes a narrow reference-motion interpolation fix:
+parenthesize the time fraction and multiply robot states instead of raising
+weights to their powers. An endpoint/midpoint regression checks the corrected
+linear trajectory independently of native rollouts.
+
+The oracle receives action values after EnvPool's float32 conversion,
+promoted to float64 for reference calculations. This avoids reproducing
+NumPy's intermediate float32 rounding inside native muscle controls; numerical
+tolerances still account for ordinary math and physics rounding error.
+
+Numerical transition comparisons use ``rtol=atol=1e-4``; fixed-state contact
+traces measured velocity differences up to ``4.8e-5`` and ground-reaction force
+differences of ``0.0012 N`` at ``90 N``. Controls retain a
+separate tight check, and contact categories, success, termination, and
+truncation remain exact. Resetting the oracle's starting physics for each check
+avoids maintaining large per-task allowances for accumulated muscle/contact
+drift. Task controllers and episode history continue independently. Edited
+ArmReach and TableTennis models retain 17-significant-digit exports so their
+physical parameters are preserved.
+
+Two additional source fixes keep the oracle's task behavior meaningful:
+Soccer updates the goalkeeper's physical collision body along with its visible
+pose, and TableTennis compares contact outcomes with enum values so invalid
+rallies terminate. Regression checks cover both fixes, and the native contact
+logic reports binary contact categories rather than the number of contact points.
+
+ChaseTag opponents and Soccer goalkeepers run their policies in C++. Their
+Gaussian samples use standard C++ distributions with the upstream spectral
+colored-noise construction. Tests transfer native reset state, then checked
+sampled reference goals and stochastic NPC velocities through diagnostic info.
+The oracle independently integrates those NPC commands and the physics and
+computes observations, rewards and episode events. Sampling bounds and native
+randomization are checked separately; NumPy's sample sequence is not required.
+
+
 Render Compare
 --------------
 

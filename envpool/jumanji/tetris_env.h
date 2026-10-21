@@ -37,7 +37,6 @@ constexpr int kRows = 10;
 constexpr int kCols = 10;
 constexpr int kTimeLimit = 400;
 constexpr int kActionMaskSize = 4 * kCols;
-constexpr int kReplaySteps = 32;
 
 using Grid = std::array<int, kRows * kCols>;
 using Tetromino = std::array<int, 16>;
@@ -89,12 +88,7 @@ class TetrisEnvFns {
   static decltype(auto) DefaultConfig() {
     return MakeDict("tetris_initial_grid"_.Bind(std::string("")),
                     "tetris_tetromino"_.Bind(std::string("")),
-                    "tetris_action_mask"_.Bind(std::string("")),
-                    "tetris_replay_grids"_.Bind(std::string("")),
-                    "tetris_replay_tetrominoes"_.Bind(std::string("")),
-                    "tetris_replay_action_masks"_.Bind(std::string("")),
-                    "tetris_replay_done"_.Bind(std::string("")),
-                    "tetris_render_grid_padded_replay"_.Bind(std::string("")));
+                    "tetris_action_mask"_.Bind(std::string("")));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -120,15 +114,8 @@ class TetrisEnv : public Env<TetrisEnvSpec>, public RenderableEnv {
   tetris::Tetromino tetromino_{};
   tetris::Tetromino configured_tetromino_{};
   std::array<bool, tetris::kActionMaskSize> configured_action_mask_{};
-  std::array<int, tetris::kReplaySteps * tetris::kRows * tetris::kCols>
-      replay_grids_{};
-  std::array<int, tetris::kReplaySteps * 16> replay_tetrominoes_{};
-  std::array<bool, tetris::kReplaySteps * tetris::kActionMaskSize>
-      replay_action_masks_{};
-  std::array<bool, tetris::kReplaySteps> replay_done_{};
   bool use_configured_grid_;
   bool use_configured_action_mask_;
-  bool use_replay_;
   int step_count_{0};
   bool done_{true};
 
@@ -145,20 +132,9 @@ class TetrisEnv : public Env<TetrisEnvSpec>, public RenderableEnv {
             tetris::ParseTetromino(spec.config["tetris_tetromino"_])),
         configured_action_mask_(parse::CsvArray<bool, tetris::kActionMaskSize>(
             spec.config["tetris_action_mask"_])),
-        replay_grids_(parse::CsvArray<int, tetris::kReplaySteps *
-                                               tetris::kRows * tetris::kCols>(
-            spec.config["tetris_replay_grids"_])),
-        replay_tetrominoes_(parse::CsvArray<int, tetris::kReplaySteps * 16>(
-            spec.config["tetris_replay_tetrominoes"_])),
-        replay_action_masks_(parse::CsvArray<bool, tetris::kReplaySteps *
-                                                       tetris::kActionMaskSize>(
-            spec.config["tetris_replay_action_masks"_])),
-        replay_done_(parse::CsvArray<bool, tetris::kReplaySteps>(
-            spec.config["tetris_replay_done"_])),
         use_configured_grid_(!spec.config["tetris_initial_grid"_].empty()),
         use_configured_action_mask_(
-            !spec.config["tetris_action_mask"_].empty()),
-        use_replay_(!spec.config["tetris_replay_grids"_].empty()) {}
+            !spec.config["tetris_action_mask"_].empty()) {}
 
   bool IsDone() override { return done_; }
 
@@ -228,7 +204,7 @@ class TetrisEnv : public Env<TetrisEnvSpec>, public RenderableEnv {
                                tetris::kCols - 1);
     const auto piece = RotatedTetromino(rotation);
     const int row = DropRow(piece, col);
-    const bool valid = row >= 0;
+    const bool valid = row >= 0 && CanPlace(rotation, col);
     float reward = 0.0f;
     if (valid) {
       for (int dr = 0; dr < 4; ++dr) {
@@ -243,20 +219,9 @@ class TetrisEnv : public Env<TetrisEnvSpec>, public RenderableEnv {
     }
     tetromino_ = SampleTetromino();
     ++step_count_;
-    if (use_replay_ && step_count_ <= tetris::kReplaySteps) {
-      for (int i = 0; i < tetris::kRows * tetris::kCols; ++i) {
-        grid_[i] =
-            replay_grids_[(step_count_ - 1) * tetris::kRows * tetris::kCols +
-                          i];
-      }
-      for (int i = 0; i < 16; ++i) {
-        tetromino_[i] = replay_tetrominoes_[(step_count_ - 1) * 16 + i];
-      }
-    }
+
     done_ = !valid || !HasValidPlacement() || step_count_ >= tetris::kTimeLimit;
-    if (use_replay_ && step_count_ <= tetris::kReplaySteps) {
-      done_ = replay_done_[step_count_ - 1];
-    }
+
     WriteState(reward);
   }
 
@@ -308,7 +273,7 @@ class TetrisEnv : public Env<TetrisEnvSpec>, public RenderableEnv {
 
   int DropRow(const tetris::Tetromino& piece, int col) const {
     // Stop at the first collision; a hard drop cannot pass through a roof.
-    for (int row = 0; row < tetris::kRows; ++row) {
+    for (int row = 0; row <= tetris::kRows; ++row) {
       for (int dr = 0; dr < 4; ++dr) {
         for (int dc = 0; dc < 4; ++dc) {
           if (piece[dr * 4 + dc] != 0 &&
@@ -323,7 +288,22 @@ class TetrisEnv : public Env<TetrisEnvSpec>, public RenderableEnv {
   }
 
   bool CanPlace(int rotation, int col) const {
-    return DropRow(RotatedTetromino(rotation), col) >= 0;
+    const auto piece = RotatedTetromino(rotation);
+    // The upstream mask fills each piece's upper overhang before checking
+    // its entry at the top of the board.
+    for (int row = 0; row < 4; ++row) {
+      for (int dc = 0; dc < 4; ++dc) {
+        bool occupied = piece[row * 4 + dc] != 0;
+        for (int below = row + 1; below < 3; ++below) {
+          occupied = occupied || piece[below * 4 + dc] != 0;
+        }
+        if (occupied && (col + dc >= tetris::kCols ||
+                         grid_[tetris::Offset(row, col + dc)] != 0)) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 
   bool HasValidPlacement() const {
@@ -377,13 +357,7 @@ class TetrisEnv : public Env<TetrisEnvSpec>, public RenderableEnv {
     for (int rotation = 0; rotation < 4; ++rotation) {
       for (int col = 0; col < tetris::kCols; ++col) {
         bool action_mask = CanPlace(rotation, col);
-        if (use_replay_ && step_count_ > 0 &&
-            step_count_ <= tetris::kReplaySteps) {
-          action_mask =
-              replay_action_masks_[((step_count_ - 1) * 4 + rotation) *
-                                       tetris::kCols +
-                                   col];
-        } else if (use_configured_action_mask_ && step_count_ == 0) {
+        if (use_configured_action_mask_ && step_count_ == 0) {
           action_mask = configured_action_mask_[rotation * tetris::kCols + col];
         }
         state["obs:action_mask"_](rotation, col) = action_mask;

@@ -37,20 +37,31 @@ from envpool.mujoco.dmc.render_oracle import configure_macos_dm_control_renderer
 from envpool.mujoco.locomotion.oracle import (
     activate_oracle_context,
     make_oracle,
+    reset_from_native,
+    step_from_native,
 )
+from envpool.mujoco.render_test_utils import assert_rgb_images
 from envpool.registration import make_dm
 
 configure_macos_dm_control_renderer()
 
 
 def generate(output: Path) -> None:
-    """Render four external action steps after one reset synchronization."""
+    """Render four independent steps from checked native state."""
     output.mkdir(parents=True, exist_ok=True)
     font = ImageFont.load_default(size=16)
     groups: dict[str, list[Image.Image]] = {}
     for task in TASKS:
         official = make_oracle(task, seed=0)
-        official.reset()
+        env: Any = make_dm(
+            f"dm_control/locomotion/{task}",
+            seed=0,
+            render_mode="rgb_array",
+            render_width=320,
+            render_height=240,
+        )
+        env.reset()
+        reset_from_native(official, env)
         camera = -1
         if "maze" not in task and "forage" not in task:
             for candidate in ("walker/side", "soccer_ball/ball_cam_far"):
@@ -62,33 +73,16 @@ def generate(output: Path) -> None:
                 )
                 if camera >= 0:
                     break
-        env: Any = make_dm(
-            f"dm_control/locomotion/{task}",
-            seed=0,
-            render_mode="rgb_array",
-            render_width=320,
-            render_height=240,
-            render_camera_id=camera,
-        )
-        env.reset()
-        state = env._snapshot()
-        with official.physics.reset_context():
-            official.physics.data.qpos[:] = state["qpos"]
-            official.physics.data.qvel[:] = state["qvel"]
-            official.physics.data.act[:] = state["act"]
-        official.physics.data.qacc_warmstart[:] = state["warmstart"]
         players = 4 if task.startswith("soccer_") else 1
         for step in range(4):
             action = np.full(
                 (players, *env.action_spec().shape), 0.05 * np.sin(step)
             )
-            activate_oracle_context(official)
-            official.step(action if players > 1 else action[0])
-            env.step(action)
-        native_frame = env.render()[0]
+            step_from_native(official, env, action)
+        native_frame = env.render(camera_id=camera)[0]
         activate_oracle_context(official)
         oracle_frame = official.physics.render(240, 320, camera)
-        np.testing.assert_array_equal(native_frame, oracle_frame, err_msg=task)
+        assert_rgb_images(native_frame, oracle_frame, task)
         row = Image.new("RGB", (640, 268), "white")
         ImageDraw.Draw(row).text((8, 5), task, font=font, fill="#263238")
         row.paste(Image.fromarray(native_frame), (0, 28))

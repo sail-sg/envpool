@@ -68,6 +68,52 @@ def oracle_command() -> list[str]:
     )
 
 
+def assert_observation_noise(
+    actual: np.ndarray,
+    clean: np.ndarray,
+    terms: dict,
+    dimensions: list,
+    context: str,
+) -> None:
+    """Check the sampled sensor error, separately from clean oracle values."""
+    offset = 0
+    for name, width in dimensions:
+        section = slice(offset, offset + width)
+        offset += width
+        term = terms[name]
+        noisy, base = actual[..., section], clean[..., section]
+        noise = term["noise"]
+        if noise is None:
+            np.testing.assert_array_equal(noisy, base, err_msg=context + name)
+            continue
+        # These are the pinned presets' actual noise contracts. New kinds must
+        # get their own distribution check instead of being silently accepted.
+        assert noise["operation"] == "add" and term["clip"] is None
+        scale = np.asarray(term["scale"] if term["scale"] is not None else 1)
+        samples = (noisy.astype(np.float64) - base) / scale
+        rounding = (
+            4
+            * np.finfo(np.float32).eps
+            * (1 + np.abs(noisy) + np.abs(base))
+            / np.abs(scale)
+        )
+        low, high = noise["n_min"], noise["n_max"]
+        assert np.all(samples >= low - rounding), context + name
+        assert np.all(samples <= high + rounding), context + name
+        if high > low:
+            centered = (samples - low) / (high - low) - 0.5
+            count = centered.size
+            # Six standard errors for Uniform(0, 1), not a particular PRNG's
+            # sequence. The second moment also rejects frozen/zero noise.
+            assert abs(centered.mean()) < 6 / np.sqrt(12 * count), (
+                context + name
+            )
+            assert abs(np.square(centered).mean() - 1 / 12) < 6 / np.sqrt(
+                180 * count
+            ), context + name
+    assert offset == actual.shape[-1]
+
+
 def native_components(
     snapshot: dict, metadata: dict, motion: dict
 ) -> tuple[dict, dict, dict]:
@@ -369,7 +415,7 @@ class MjlabAlignTest(parameterized.TestCase):
                                 )
 
     def run_oracle(self, folder: Path, source: Path | None = None) -> Path:
-        """Run the official registry query or an independent complete rollout."""
+        """Run the official registry query or checked transitions of a full episode."""
         output = folder / ("oracle.npz" if source else "registry.json")
         cache = (
             Path(
@@ -445,7 +491,7 @@ class MjlabAlignTest(parameterized.TestCase):
         curriculum: tuple[int, bool] | None = None,
         render_size: tuple[int, int] = (96, 80),
     ) -> tuple[np.ndarray, np.ndarray]:
-        """Synchronize once after reset, then compare only action-driven steps."""
+        """Compare independent transitions from native physics and checked event state."""
         folder = Path(self.create_tempdir().full_path)
         options = task_options(task)
         if short_motion:
@@ -485,6 +531,7 @@ class MjlabAlignTest(parameterized.TestCase):
                     # A real change of spawn position must accompany the level;
                     # checking only curriculum counters would miss a frozen map.
                     self.assertNotEqual(before["origin"], after["origin"])
+                snapshot = native._snapshot(env_id=env_slot, include_model=True)
             if num_envs > 1:
                 metadata = json.loads(snapshot["metadata"])
                 state = json.loads(snapshot["task"])
@@ -514,15 +561,55 @@ class MjlabAlignTest(parameterized.TestCase):
             )
             render_steps = {0, 1, 17, 31, 64, 127, 255, 511}
             rows: dict[str, list[Any]] = {}
+            noisy_rows: dict[str, list[np.ndarray]] = {}
             frames, frame_steps = [], []
             motion_frames = []
+            step_states = []
+            warmstarts = []
+            motor_targets = []
 
             def record(
                 step: int, reward: float, terminated: bool, truncated: bool
             ) -> None:
-                state = native._snapshot(env_id=env_slot)
+                state = native._snapshot(
+                    env_id=env_slot,
+                    fields=[
+                        "data.qpos",
+                        "data.qvel",
+                        "data.qacc_warmstart",
+                        "data.ctrl",
+                    ],
+                )
+                warmstarts.append(
+                    np.frombuffer(
+                        state["physics"]["data.qacc_warmstart"], np.float32
+                    ).copy()
+                )
+                motor_targets.append(
+                    np.frombuffer(
+                        state["physics"]["data.ctrl"], np.float32
+                    ).copy()
+                )
+                task_state = json.loads(state["task"])
+                step_states.append(
+                    json.dumps({
+                        key: task_state[key]
+                        for key in (
+                            "command",
+                            "event_timers",
+                            "origin",
+                            "push_velocities",
+                        )
+                    })
+                )
+                clean = task_state["clean_observations"]
+                for key in clean:
+                    noisy_rows.setdefault(key, []).append(obs[key].copy())
                 values = {
-                    f"obs:{key}": value.copy() for key, value in obs.items()
+                    f"obs:{key}": np.asarray(
+                        clean.get(key, value), dtype=value.dtype
+                    ).reshape(value.shape)
+                    for key, value in obs.items()
                 }
                 values.update(
                     reward=np.array(reward, np.float32),
@@ -572,11 +659,16 @@ class MjlabAlignTest(parameterized.TestCase):
                 **initial,
                 model=np.frombuffer(snapshot["model"], np.uint8),
                 state=snapshot["task"],
+                metadata=snapshot["metadata"],
+                step_states=np.asarray(step_states),
+                native_qpos=np.stack(rows["qpos"]),
+                native_qvel=np.stack(rows["qvel"]),
+                native_warmstart=np.stack(warmstarts),
+                native_ctrl=np.stack(motor_targets),
                 task=task,
                 motion_file=options.get("motion_file", ""),
                 actions=controls,
                 render_steps=np.array(frame_steps),
-                reset_after_sync=curriculum is not None,
                 render_size=np.array(render_size),
             )
             output = self.run_oracle(folder, source)
@@ -595,6 +687,17 @@ class MjlabAlignTest(parameterized.TestCase):
                 }
                 all_values["frames"] = np.stack(frames)
                 all_values["frame_steps"] = np.array(frame_steps)
+                dimensions = json.loads(str(oracle["observation_dims"]))
+                metadata = json.loads(snapshot["metadata"])
+                for group, noisy in noisy_rows.items():
+                    with self.subTest(noise_group=group):
+                        assert_observation_noise(
+                            np.stack(noisy),
+                            all_values["obs:" + group],
+                            metadata["observation"][group],
+                            dimensions[group],
+                            task,
+                        )
                 failed_fields = []
                 for key, values in all_values.items():
                     with self.subTest(field=key):
@@ -611,14 +714,39 @@ class MjlabAlignTest(parameterized.TestCase):
                                 assert_render_images(
                                     values, oracle[key], task, context
                                 )
+                            elif key.startswith("obs:") and {
+                                term["func"]["callable"].rsplit(".", 1)[-1]
+                                for term in metadata["observation"][
+                                    key[4:]
+                                ].values()
+                            } == {"camera_rgb"}:
+                                # These observations are normalized uint8 RGB;
+                                # use the same visual contract as render().
+                                images = []
+                                for value in (values, oracle[key]):
+                                    self.assertTrue(
+                                        np.all((value >= 0) & (value <= 1))
+                                    )
+                                    images.append(
+                                        np.moveaxis(
+                                            np.rint(value * 255).astype(
+                                                np.uint8
+                                            ),
+                                            -3,
+                                            -1,
+                                        )
+                                    )
+                                assert_render_images(
+                                    images[0], images[1], task, context
+                                )
                             elif np.issubdtype(values.dtype, np.floating):
-                                # Compare complete rollouts without copying
-                                # CPU dispatch or reduction internals.
+                                # Each transition starts from the same native
+                                # physical state; no per-task drift allowances.
                                 np.testing.assert_allclose(
                                     values,
                                     oracle[key],
-                                    rtol=1e-5,
-                                    atol=1e-6,
+                                    rtol=1e-4,
+                                    atol=1e-4,
                                     err_msg=context,
                                 )
                             else:

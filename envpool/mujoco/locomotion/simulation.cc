@@ -36,7 +36,6 @@ Simulation::Simulation(Options options)
     : options_(std::move(options)),
       task_(GetTaskConfig(options_.task)),
       random_(options_.seed),
-      scene_random_(options_.seed),
       scene_(options_.asset_path, options_.labmaze_asset_path),
       layout_(ObservationLayout(options_.task, options_.team_size)),
       players_(task_.task == Task::kSoccer ? options_.team_size * 2 : 1) {
@@ -259,7 +258,7 @@ void Simulation::ResetWalker(int index) {
   }
   if (task_.task == Task::kSoccer && mocap_) {
     const auto& clip = mocap_->clips[0];
-    const int frame = random_.Int(clip.frames);
+    const int frame = random_.Integer(clip.frames);
     for (std::size_t i = 0; i < kCmuMocapJoints.size(); ++i) {
       const int joint =
           Id(mjOBJ_JOINT, walker.prefix + std::string(kCmuMocapJoints[i]));
@@ -302,6 +301,9 @@ void Simulation::ShiftWalker(int index, const std::array<double, 3>& position,
 }
 
 void Simulation::Reset() {
+#ifdef ENVPOOL_TEST
+  throw_in_position_.clear();
+#endif
   steps_ = 0;
   failure_ = done_ = truncated_ = success_ = false;
   discount = 1;
@@ -329,7 +331,7 @@ void Simulation::Reset() {
   } else if (task_.task == Task::kTarget || task_.task == Task::kTracking) {
     scene_.Floor(8);
   } else if (maze) {
-    scene_.MazeArena(task_, &scene_random_);
+    scene_.MazeArena(task_, &random_);
   } else if (task_.task == Task::kTwoTouch) {
     scene_.Floor(10, true);
   } else if (task_.task == Task::kBowl) {
@@ -380,7 +382,7 @@ void Simulation::Reset() {
   } else if (maze) {
     RespawnMaze();
   } else if (task_.task == Task::kTwoTouch) {
-    ShiftWalker(0, {0, 0, 0}, 2 * std::acos(-1) * scene_random_.Uniform());
+    ShiftWalker(0, {0, 0, 0}, 2 * std::acos(-1) * random_.Uniform());
     RandomizeTouchTarget();
     observed_touch_state_ = 0;
   } else if (task_.task == Task::kBowl) {
@@ -406,7 +408,7 @@ void Simulation::Reset() {
 
 void Simulation::RespawnMaze() {
   const auto& position =
-      scene_.spawn_positions[random_.Int(scene_.spawn_positions.size())];
+      scene_.spawn_positions[random_.Integer(scene_.spawn_positions.size())];
   double rotation = 0;
   if (task_.task != Task::kHeterogeneous) {
     ShiftWalker(0, {0, 0, 100});
@@ -426,9 +428,8 @@ void Simulation::RespawnMaze() {
         direction = i;
       }
     }
-    rotation =
-        2 * std::acos(-1) * direction / 10 +
-        std::acos(-1) * (1 + std::tanh(std::atanh(random_.Uniform(-1, 1))));
+    rotation = 2 * std::acos(-1) * direction / 10 +
+               std::acos(-1) * (1 + random_.Uniform(-1, 1));
     ShiftWalker(0, {0, 0, -100});
   }
   ShiftWalker(0, position, rotation);
@@ -590,6 +591,9 @@ void Simulation::AfterStep() {
 }
 
 void Simulation::Step(const double* actions) {
+#ifdef ENVPOOL_TEST
+  throw_in_position_.clear();
+#endif
   const int action_size = ActionSize(task_.walker);
   for (int player = 0; player < players_; ++player) {
     for (int i = 0; i < action_size; ++i) {

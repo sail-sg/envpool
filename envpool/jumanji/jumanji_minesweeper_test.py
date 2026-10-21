@@ -82,7 +82,7 @@ class JumanjiMinesweeperTest(absltest.TestCase):
             self.assertEqual(int(obs["num_mines"][0]), 3)
             self.assertEqual(int(obs["step_count"][0]), 0)
 
-            for action in [(0, 1), (2, 2)]:
+            for action in [(0, 1), (0, 4), (2, 2)]:
                 expected_reward, expected_done = reference.step(*action)
                 obs, reward, terminated, truncated, _ = env.step(
                     np.asarray([action], dtype=np.int32)

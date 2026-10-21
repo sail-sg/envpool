@@ -67,7 +67,6 @@ from .jumanji_envpool import (
     _TSPEnvPool,
     _TSPEnvSpec,
 )
-from .jumanji_render import with_jumanji_python_render
 
 (
     Game2048EnvSpec,
@@ -197,78 +196,3 @@ from .jumanji_render import with_jumanji_python_render
     SokobanDMEnvPool,
     SokobanGymnasiumEnvPool,
 ) = py_env(_SokobanEnvSpec, _SokobanEnvPool)
-
-BinPackGymnasiumEnvPool = with_jumanji_python_render(
-    BinPackGymnasiumEnvPool, "BinPack-v2"
-)
-CVRPGymnasiumEnvPool = with_jumanji_python_render(
-    CVRPGymnasiumEnvPool, "CVRP-v1"
-)
-CleanerGymnasiumEnvPool = with_jumanji_python_render(
-    CleanerGymnasiumEnvPool, "Cleaner-v0"
-)
-ConnectorGymnasiumEnvPool = with_jumanji_python_render(
-    ConnectorGymnasiumEnvPool, "Connector-v3"
-)
-FlatPackGymnasiumEnvPool = with_jumanji_python_render(
-    FlatPackGymnasiumEnvPool, "FlatPack-v0"
-)
-Game2048GymnasiumEnvPool = with_jumanji_python_render(
-    Game2048GymnasiumEnvPool, "Game2048-v1"
-)
-GraphColoringGymnasiumEnvPool = with_jumanji_python_render(
-    GraphColoringGymnasiumEnvPool, "GraphColoring-v1"
-)
-JobShopGymnasiumEnvPool = with_jumanji_python_render(
-    JobShopGymnasiumEnvPool, "JobShop-v0"
-)
-KnapsackGymnasiumEnvPool = with_jumanji_python_render(
-    KnapsackGymnasiumEnvPool, "Knapsack-v1"
-)
-LevelBasedForagingGymnasiumEnvPool = with_jumanji_python_render(
-    LevelBasedForagingGymnasiumEnvPool, "LevelBasedForaging-v0"
-)
-MMSTGymnasiumEnvPool = with_jumanji_python_render(
-    MMSTGymnasiumEnvPool, "MMST-v0"
-)
-MazeGymnasiumEnvPool = with_jumanji_python_render(
-    MazeGymnasiumEnvPool, "Maze-v0"
-)
-MinesweeperGymnasiumEnvPool = with_jumanji_python_render(
-    MinesweeperGymnasiumEnvPool, "Minesweeper-v0"
-)
-MultiCVRPGymnasiumEnvPool = with_jumanji_python_render(
-    MultiCVRPGymnasiumEnvPool, "MultiCVRP-v0"
-)
-PacManGymnasiumEnvPool = with_jumanji_python_render(
-    PacManGymnasiumEnvPool, "PacMan-v1"
-)
-RobotWarehouseGymnasiumEnvPool = with_jumanji_python_render(
-    RobotWarehouseGymnasiumEnvPool, "RobotWarehouse-v0"
-)
-RubiksCubeGymnasiumEnvPool = with_jumanji_python_render(
-    RubiksCubeGymnasiumEnvPool, "RubiksCube-v0"
-)
-RubiksCubePartlyScrambledGymnasiumEnvPool = with_jumanji_python_render(
-    RubiksCubePartlyScrambledGymnasiumEnvPool,
-    "RubiksCube-partly-scrambled-v0",
-)
-SearchAndRescueGymnasiumEnvPool = with_jumanji_python_render(
-    SearchAndRescueGymnasiumEnvPool, "SearchAndRescue-v0"
-)
-SlidingTilePuzzleGymnasiumEnvPool = with_jumanji_python_render(
-    SlidingTilePuzzleGymnasiumEnvPool, "SlidingTilePuzzle-v0"
-)
-SnakeGymnasiumEnvPool = with_jumanji_python_render(
-    SnakeGymnasiumEnvPool, "Snake-v1"
-)
-SokobanGymnasiumEnvPool = with_jumanji_python_render(
-    SokobanGymnasiumEnvPool, "Sokoban-v0"
-)
-SudokuGymnasiumEnvPool = with_jumanji_python_render(
-    SudokuGymnasiumEnvPool, "Sudoku-v0"
-)
-TetrisGymnasiumEnvPool = with_jumanji_python_render(
-    TetrisGymnasiumEnvPool, "Tetris-v0"
-)
-TSPGymnasiumEnvPool = with_jumanji_python_render(TSPGymnasiumEnvPool, "TSP-v1")

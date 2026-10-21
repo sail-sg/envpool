@@ -20,46 +20,19 @@ from __future__ import annotations
 import argparse
 import math
 import os
-import platform
-import subprocess
-import sys
-import warnings
-from collections.abc import Callable, Iterator
-from dataclasses import dataclass, fields, is_dataclass, replace
-from functools import lru_cache
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
+from envpool.mujoco.render_oracle import configure_linux_mujoco_gl
 from envpool.python.glfw_context import preload_windows_gl_dlls
 
 preload_windows_gl_dlls(strict=True)
-
-
-def _configure_linux_mujoco_gl() -> None:
-    """Pick an offscreen MuJoCo GL backend on Linux before importing mujoco."""
-    if platform.system() != "Linux" or os.environ.get("MUJOCO_GL"):
-        return
-
-    for backend in ("egl", "osmesa"):
-        probe_env = os.environ.copy()
-        probe_env["MUJOCO_GL"] = backend
-        code = "import mujoco; mujoco.GLContext(8, 8).free()"
-        proc = subprocess.run(
-            [sys.executable, "-c", code],
-            env=probe_env,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=False,
-        )
-        if proc.returncode == 0:
-            os.environ["MUJOCO_GL"] = backend
-            return
-
-
-_configure_linux_mujoco_gl()
+configure_linux_mujoco_gl()
 
 
 @dataclass(frozen=True)
@@ -312,550 +285,47 @@ def _make_metaworld_family() -> RenderFamily:
 
 
 def _make_jumanji_family() -> RenderFamily:
-    """Build the Jumanji official render comparison adapter."""
-    from envpool.jumanji.jumanji_official_render import configure_matplotlib
-
-    configure_matplotlib()
-    warnings.filterwarnings(
-        "ignore",
-        message="FigureCanvasAgg is non-interactive.*",
-        category=UserWarning,
-    )
-
-    import jax
-    import jax.numpy as jnp
-    import jumanji
-    from jumanji.environments.routing.sokoban.generator import (
-        SimpleSolveGenerator,
-    )
-
+    """Use the same reset synchronization as independent alignment tests."""
     import envpool.jumanji.registration as jumanji_registration
+    from envpool.jumanji import oracle
     from envpool.registration import make_gymnasium
 
-    def find_viewer(official_env: Any) -> Any:
-        for value in vars(official_env).values():
-            if hasattr(value, "_display_rgb_array"):
-                return value
-        raise RuntimeError(
-            f"{type(official_env).__name__} exposes no Matplotlib viewer"
-        )
-
-    def make_official_env(task_id: str) -> Any:
-        if task_id == "Sokoban-v0":
-            return jumanji.make(task_id, generator=SimpleSolveGenerator())
-        return jumanji.make(task_id)
-
-    def as_numpy(value: Any) -> np.ndarray:
-        return np.asarray(jax.device_get(value))
-
-    def csv_flat(value: Any) -> str:
-        array = as_numpy(value).reshape(-1)
-        return ",".join(map(str, array.tolist()))
-
-    def csv_flat_int(value: Any) -> str:
-        array = as_numpy(value).astype(np.int64, copy=False).reshape(-1)
-        return ",".join(map(str, array.tolist()))
-
-    def position_csv(position: Any) -> str:
-        row = getattr(position, "row", getattr(position, "y", None))
-        col = getattr(position, "col", getattr(position, "x", None))
-        if row is None or col is None:
-            array = as_numpy(position).reshape(-1)
-            row, col = array[0], array[1]
-        return f"{int(row)},{int(col)}"
-
-    def replace_fields(value: Any, updates: dict[str, Any]) -> Any:
-        if not updates:
-            return value
-        if is_dataclass(value):
-            return replace(value, **updates)
-        if isinstance(value, tuple) and hasattr(value, "_fields"):
-            return value._replace(**updates)
-        raise TypeError(f"Cannot replace fields on {type(value)!r}")
-
-    def coerce_like(template: Any, value: Any) -> Any:
-        if isinstance(value, dict):
-            return patch_struct_from_dict(template, value)
-        array = np.asarray(value)
-        try:
-            template_array = as_numpy(template)
-        except Exception:  # noqa: BLE001 - nested objects are handled above.
-            return array
-        if array.dtype != template_array.dtype:
-            array = array.astype(template_array.dtype, copy=False)
-        return jnp.asarray(array)
-
-    def patch_struct_from_dict(template: Any, values: dict[str, Any]) -> Any:
-        updates = {}
-        if is_dataclass(template):
-            field_names = {field.name for field in fields(template)}
-        elif isinstance(template, tuple) and hasattr(template, "_fields"):
-            field_names = set(template._fields)
-        else:
-            return template
-        for key, value in values.items():
-            if key in field_names:
-                updates[key] = coerce_like(getattr(template, key), value)
-        return replace_fields(template, updates)
-
-    def first_env_tree(value: Any) -> Any:
-        if isinstance(value, dict):
-            return {key: first_env_tree(item) for key, item in value.items()}
-        array = np.asarray(value)
-        if array.shape[:1] != (1,):
-            raise RuntimeError(f"Expected one-env batch, got {array.shape}")
-        return array[0]
-
-    def patch_tetris_render_state(
-        official_state: Any,
-        obs: dict[str, Any],
-    ) -> Any:
-        grid_padded = as_numpy(official_state.grid_padded).copy()
-        grid = np.asarray(obs["grid"], dtype=grid_padded.dtype)
-        grid_padded[: grid.shape[0], : grid.shape[1]] = grid
-        return replace_fields(
-            official_state,
-            {
-                "grid_padded": jnp.asarray(grid_padded),
-                "grid_padded_old": jnp.asarray(grid_padded),
-                "new_tetromino": jnp.asarray(
-                    obs["tetromino"],
-                    dtype=as_numpy(official_state.new_tetromino).dtype,
-                ),
-                "action_mask": jnp.asarray(
-                    obs["action_mask"],
-                    dtype=as_numpy(official_state.action_mask).dtype,
-                ),
-                "step_count": jnp.asarray(
-                    obs["step_count"],
-                    dtype=as_numpy(official_state.step_count).dtype,
-                ),
-            },
-        )
-
-    def patch_sokoban_render_state(
-        official_state: Any,
-        obs: dict[str, Any],
-    ) -> Any:
-        grid = np.asarray(obs["grid"])
-        if grid.ndim != 3 or grid.shape[-1] < 2:
-            return official_state
-        return replace_fields(
-            official_state,
-            {
-                "fixed_grid": jnp.asarray(
-                    grid[:, :, 0],
-                    dtype=as_numpy(official_state.fixed_grid).dtype,
-                ),
-                "variable_grid": jnp.asarray(
-                    grid[:, :, 1],
-                    dtype=as_numpy(official_state.variable_grid).dtype,
-                ),
-                "step_count": jnp.asarray(
-                    obs["step_count"],
-                    dtype=as_numpy(official_state.step_count).dtype,
-                ),
-            },
-        )
-
-    def render_state_from_envpool_obs(
-        task_id: str,
-        official_state: Any,
-        envpool_obs: dict[str, Any],
-    ) -> Any:
-        patched = patch_struct_from_dict(official_state, envpool_obs)
-        if task_id == "Tetris-v0":
-            patched = patch_tetris_render_state(patched, envpool_obs)
-        elif task_id == "Sokoban-v0":
-            patched = patch_sokoban_render_state(patched, envpool_obs)
-        return patched
-
-    def official_render(
-        official_env: Any,
-        official_viewer: Any,
-        official_state: Any,
-    ) -> np.ndarray:
-        frame = official_env.render(official_state)
-        if frame is None:
-            frame = official_viewer.render(official_state)
-        if frame is None:
-            raise RuntimeError(
-                f"{type(official_env).__name__} returned no frame"
-            )
-        frame = np.asarray(frame, dtype=np.uint8)
-        if frame.shape[-1] == 4:
-            frame = frame[:, :, :3]
-        return frame
-
-    def graph_coloring_edges(adj_matrix: Any) -> str:
-        adj = as_numpy(adj_matrix).astype(bool, copy=False)
-        edges = [
-            f"{row}-{col}"
-            for row in range(adj.shape[0])
-            for col in range(row + 1, adj.shape[1])
-            if adj[row, col]
-        ]
-        return ",".join(edges)
-
-    def minesweeper_locations(official_state: Any) -> str:
-        if hasattr(official_state, "flat_mine_locations"):
-            return csv_flat_int(official_state.flat_mine_locations)
-        locations = as_numpy(official_state.mine_locations)
-        if locations.ndim == 2 and locations.shape[1] == 2:
-            locations = locations[:, 0] * 10 + locations[:, 1]
-        return ",".join(map(str, locations.astype(np.int64).reshape(-1)))
-
-    def cvrp_distance_matrix(official_state: Any) -> str:
-        coordinates = as_numpy(official_state.coordinates).astype(np.float32)
-        deltas = coordinates[:, None, :] - coordinates[None, :, :]
-        distances = np.sqrt(np.sum(deltas * deltas, axis=-1, dtype=np.float32))
-        return csv_flat(distances.astype(np.float32, copy=False))
-
-    def envpool_kwargs_from_official_state(
-        task_id: str,
-        official_state: Any,
-        official_observation: Any,
-    ) -> dict[str, Any]:
-        if task_id == "BinPack-v2":
-            return {
-                "bin_pack_item_x_len": csv_flat(
-                    official_observation.items.x_len
-                ),
-                "bin_pack_item_y_len": csv_flat(
-                    official_observation.items.y_len
-                ),
-                "bin_pack_item_z_len": csv_flat(
-                    official_observation.items.z_len
-                ),
-                "bin_pack_items_mask": csv_flat_int(
-                    official_observation.items_mask
-                ),
-                "bin_pack_render_container": csv_flat(
-                    np.asarray(
-                        [
-                            as_numpy(official_state.container.x1),
-                            as_numpy(official_state.container.x2),
-                            as_numpy(official_state.container.y1),
-                            as_numpy(official_state.container.y2),
-                            as_numpy(official_state.container.z1),
-                            as_numpy(official_state.container.z2),
-                        ],
-                        dtype=np.float32,
-                    )
-                ),
-                "bin_pack_render_item_x_len": csv_flat(
-                    official_state.items.x_len
-                ),
-                "bin_pack_render_item_y_len": csv_flat(
-                    official_state.items.y_len
-                ),
-                "bin_pack_render_item_z_len": csv_flat(
-                    official_state.items.z_len
-                ),
-            }
-        if task_id == "CVRP-v1":
-            return {
-                "cvrp_coordinates": csv_flat(official_state.coordinates),
-                "cvrp_demands": csv_flat(official_observation.demands),
-                "cvrp_distance_matrix": cvrp_distance_matrix(official_state),
-            }
-        if task_id == "Cleaner-v0":
-            return {
-                "cleaner_grid": csv_flat_int(official_state.grid),
-                "cleaner_agent_locations": csv_flat_int(
-                    official_state.agents_locations
-                ),
-            }
-        if task_id == "Connector-v2":
-            return {"connector_grid": csv_flat_int(official_state.grid)}
-        if task_id == "FlatPack-v0":
-            return {
-                "flat_pack_blocks": csv_flat_int(official_observation.blocks),
-                "flat_pack_action_mask": csv_flat_int(
-                    official_observation.action_mask
-                ),
-            }
-        if task_id == "Game2048-v1":
-            return {
-                "game2048_initial_board": csv_flat_int(official_state.board)
-            }
-        if task_id == "GraphColoring-v1":
-            return {
-                "graph_coloring_edges": graph_coloring_edges(
-                    official_state.adj_matrix
-                )
-            }
-        if task_id == "JobShop-v0":
-            return {
-                "job_shop_ops_machine_ids": csv_flat_int(
-                    official_observation.ops_machine_ids
-                ),
-                "job_shop_ops_durations": csv_flat_int(
-                    official_observation.ops_durations
-                ),
-                "job_shop_ops_mask": csv_flat_int(
-                    official_observation.ops_mask
-                ),
-                "job_shop_machines_job_ids": csv_flat_int(
-                    official_observation.machines_job_ids
-                ),
-                "job_shop_machines_remaining_times": csv_flat_int(
-                    official_observation.machines_remaining_times
-                ),
-                "job_shop_action_mask": csv_flat_int(
-                    official_observation.action_mask
-                ),
-            }
-        if task_id == "Knapsack-v1":
-            return {
-                "knapsack_weights": csv_flat(official_observation.weights),
-                "knapsack_values": csv_flat(official_observation.values),
-            }
-        if task_id == "Maze-v0":
-            return {
-                "maze_walls": csv_flat_int(official_state.walls),
-                "maze_agent_position": position_csv(
-                    official_state.agent_position
-                ),
-                "maze_target_position": position_csv(
-                    official_state.target_position
-                ),
-            }
-        if task_id == "Minesweeper-v0":
-            return {
-                "minesweeper_mine_locations": minesweeper_locations(
-                    official_state
-                )
-            }
-        if task_id == "LevelBasedForaging-v0":
-            agents = np.column_stack([
-                as_numpy(official_state.agents.position),
-                as_numpy(official_state.agents.level),
-            ])
-            food = np.column_stack([
-                as_numpy(official_state.food_items.position),
-                as_numpy(official_state.food_items.level),
-            ])
-            return {
-                "lbf_agents": csv_flat_int(agents),
-                "lbf_food": csv_flat_int(food),
-            }
-        if task_id == "MMST-v0":
-            return {
-                "mmst_node_types": csv_flat_int(
-                    official_observation.node_types
-                ),
-                "mmst_adj_matrix": csv_flat_int(
-                    official_observation.adj_matrix
-                ),
-                "mmst_positions": csv_flat_int(official_observation.positions),
-                "mmst_action_mask": csv_flat_int(
-                    official_observation.action_mask
-                ),
-                "mmst_render_nodes_to_connect": csv_flat_int(
-                    official_state.nodes_to_connect
-                ),
-            }
-        if task_id == "MultiCVRP-v0":
-            return {
-                "multi_cvrp_node_coordinates": csv_flat(
-                    official_observation.nodes.coordinates
-                ),
-                "multi_cvrp_node_demands": csv_flat_int(
-                    official_observation.nodes.demands
-                ),
-                "multi_cvrp_windows_start": csv_flat(
-                    official_observation.windows.start
-                ),
-                "multi_cvrp_windows_end": csv_flat(
-                    official_observation.windows.end
-                ),
-                "multi_cvrp_coeffs_early": csv_flat(
-                    official_observation.coeffs.early
-                ),
-                "multi_cvrp_coeffs_late": csv_flat(
-                    official_observation.coeffs.late
-                ),
-                "multi_cvrp_vehicle_local_times": csv_flat(
-                    official_observation.vehicles.local_times
-                ),
-                "multi_cvrp_vehicle_capacities": csv_flat_int(
-                    official_observation.vehicles.capacities
-                ),
-                "multi_cvrp_action_mask": csv_flat_int(
-                    official_observation.action_mask
-                ),
-            }
-        if task_id == "PacMan-v1":
-            return {
-                "pacman_grid": csv_flat_int(official_state.grid),
-                "pacman_player_location": position_csv(
-                    official_state.player_locations
-                ),
-                "pacman_pellet_locations": csv_flat_int(
-                    official_state.pellet_locations
-                ),
-                "pacman_ghost_locations": csv_flat_int(
-                    official_observation.ghost_locations
-                ),
-                "pacman_power_up_locations": csv_flat_int(
-                    official_observation.power_up_locations
-                ),
-                "pacman_action_mask": csv_flat_int(
-                    official_observation.action_mask
-                ),
-                "pacman_frightened_state_time": int(
-                    as_numpy(official_observation.frightened_state_time)
-                ),
-                "pacman_initial_score": int(
-                    as_numpy(official_observation.score)
-                ),
-            }
-        if task_id == "RobotWarehouse-v0":
-            return {
-                "robot_warehouse_agents_view": csv_flat_int(
-                    official_observation.agents_view
-                ),
-                "robot_warehouse_action_mask": csv_flat_int(
-                    official_observation.action_mask
-                ),
-                "robot_warehouse_render_grid": csv_flat_int(
-                    official_state.grid
-                ),
-                "robot_warehouse_render_agent_x": csv_flat_int(
-                    official_state.agents.position.x
-                ),
-                "robot_warehouse_render_agent_y": csv_flat_int(
-                    official_state.agents.position.y
-                ),
-                "robot_warehouse_render_agent_direction": csv_flat_int(
-                    official_state.agents.direction
-                ),
-                "robot_warehouse_render_agent_carrying": csv_flat_int(
-                    official_state.agents.is_carrying
-                ),
-                "robot_warehouse_render_shelf_x": csv_flat_int(
-                    official_state.shelves.position.x
-                ),
-                "robot_warehouse_render_shelf_y": csv_flat_int(
-                    official_state.shelves.position.y
-                ),
-                "robot_warehouse_render_shelf_requested": csv_flat_int(
-                    official_state.shelves.is_requested
-                ),
-            }
-        if task_id.startswith("RubiksCube"):
-            return {
-                "rubiks_cube_initial_cube": csv_flat_int(official_state.cube)
-            }
-        if task_id == "SearchAndRescue-v0":
-            return {
-                "search_and_rescue_searcher_views": csv_flat(
-                    official_observation.searcher_views
-                ),
-                "search_and_rescue_positions": csv_flat(
-                    official_observation.positions
-                ),
-                "search_and_rescue_headings": csv_flat(
-                    official_state.searchers.heading
-                ),
-                "search_and_rescue_speeds": csv_flat(
-                    official_state.searchers.speed
-                ),
-                "search_and_rescue_targets_remaining": float(
-                    as_numpy(official_observation.targets_remaining)
-                ),
-                "search_and_rescue_target_positions": csv_flat(
-                    official_state.targets.pos
-                ),
-                "search_and_rescue_target_velocities": csv_flat(
-                    official_state.targets.vel
-                ),
-                "search_and_rescue_target_found": csv_flat_int(
-                    official_state.targets.found
-                ),
-            }
-        if task_id == "SlidingTilePuzzle-v0":
-            return {
-                "sliding_tile_initial_puzzle": csv_flat_int(
-                    official_state.puzzle
-                )
-            }
-        if task_id == "Snake-v1":
-            return {
-                "snake_head_position": position_csv(
-                    official_state.head_position
-                ),
-                "snake_fruit_position": position_csv(
-                    official_state.fruit_position
-                ),
-            }
-        if task_id.startswith("Sudoku"):
-            return {"sudoku_initial_board": csv_flat_int(official_state.board)}
-        if task_id == "TSP-v1":
-            return {"tsp_coordinates": csv_flat(official_state.coordinates)}
-        if task_id == "Tetris-v0":
-            return {
-                "tetris_initial_grid": csv_flat_int(
-                    as_numpy(official_state.grid_padded)[:10, :10]
-                ),
-                "tetris_tetromino": csv_flat_int(official_state.new_tetromino),
-                "tetris_action_mask": csv_flat_int(
-                    official_observation.action_mask
-                ),
-            }
-        return {}
-
     def render_pair(
-        task_id: str,
-        cfg: RenderCompareConfig,
+        task_id: str, cfg: RenderCompareConfig
     ) -> tuple[np.ndarray, np.ndarray]:
-        official_env = make_official_env(task_id)
-        official_viewer = find_viewer(official_env)
-        official_viewer._display = official_viewer._display_rgb_array
-        official_viewer.figure_size = (
-            cfg.source_width / 100.0,
-            cfg.source_height / 100.0,
-        )
+        official_env = oracle._make_official_env(task_id)
         env = None
         try:
-            official_state, official_timestep = official_env.reset(
-                jax.random.PRNGKey(cfg.seed)
+            state, timestep = official_env.reset(
+                oracle.jax.random.PRNGKey(cfg.seed)
             )
-            official_frame = official_render(
-                official_env,
-                official_viewer,
-                official_state,
-            )
-            envpool_kwargs: dict[str, Any] = {
-                "num_envs": 1,
-                "seed": cfg.seed,
-                "render_mode": "rgb_array",
-                "render_width": cfg.source_width,
-                "render_height": cfg.source_height,
-            }
-            envpool_kwargs.update(
-                envpool_kwargs_from_official_state(
-                    task_id, official_state, official_timestep.observation
-                )
+            kwargs = oracle._envpool_kwargs_from_official_state(
+                task_id, state, timestep.observation
             )
             if task_id == "Sokoban-v0":
-                envpool_kwargs.update(
+                kwargs.update(
                     base_path="/tmp/envpool-missing-boxoban",
                     sokoban_level_index=0,
                 )
             env = make_gymnasium(
                 task_id,
-                **envpool_kwargs,
+                num_envs=1,
+                seed=cfg.seed,
+                render_mode="rgb_array",
+                render_width=cfg.source_width,
+                render_height=cfg.source_height,
+                **kwargs,
             )
-            envpool_obs, _ = env.reset()
-            del envpool_obs
-            envpool_frame = env.render()[0]
-            return envpool_frame, official_frame
+            env.reset()
+            frames = env.render()
+            assert frames is not None
+            return frames[0], oracle._official_render(
+                official_env, state, cfg.source_width, cfg.source_height
+            )
         finally:
             if env is not None:
                 env.close()
-            official_viewer.close()
+            official_env.close()
 
     return RenderFamily(
         items=tuple(
@@ -868,351 +338,31 @@ def _make_jumanji_family() -> RenderFamily:
         render_pair=render_pair,
         left_title="EnvPool",
         right_title="Official",
-        compare_frames=True,
+        # Native task graphics intentionally use a different layout and style.
+        compare_frames=False,
     )
-
-
-def _candidate_runfile_roots() -> Iterator[Path]:
-    seen: set[Path] = set()
-    raw_roots = (
-        os.environ.get("RUNFILES_DIR"),
-        os.environ.get("TEST_SRCDIR"),
-        os.environ.get("PYTHON_RUNFILES"),
-    )
-    for raw_root in raw_roots:
-        if raw_root:
-            root = Path(raw_root)
-            if root not in seen:
-                seen.add(root)
-                yield root
-
-    for current in (Path(__file__), Path(__file__).resolve()):
-        for parent in current.parents:
-            if parent.name.endswith(".runfiles") and parent not in seen:
-                seen.add(parent)
-                yield parent
-
-
-@lru_cache
-def _runfiles_manifest_entries() -> tuple[tuple[str, Path], ...]:
-    manifest = os.environ.get("RUNFILES_MANIFEST_FILE")
-    if not manifest:
-        return ()
-    entries = []
-    with Path(manifest).open(encoding="utf-8") as f:
-        for line in f:
-            logical, sep, physical = line.rstrip("\n").partition(" ")
-            entries.append((logical, Path(physical if sep else logical)))
-    return tuple(entries)
-
-
-def _find_manifest_runfile(path: str) -> Path | None:
-    path = path.replace("\\", "/")
-    candidates = [path]
-    workspace = os.environ.get("TEST_WORKSPACE")
-    if workspace:
-        candidates.append(f"{workspace}/{path}")
-    for logical, physical in _runfiles_manifest_entries():
-        for candidate in candidates:
-            if logical == candidate:
-                return physical
-            prefix = f"{candidate.rstrip('/')}/"
-            if logical.startswith(prefix):
-                result = physical
-                for _ in logical[len(prefix) :].split("/"):
-                    result = result.parent
-                return result
-    return None
-
-
-def _find_runfile(path: str) -> Path:
-    manifest_path = _find_manifest_runfile(path)
-    if manifest_path is not None:
-        return manifest_path
-    for root in _candidate_runfile_roots():
-        direct = root / path
-        if direct.exists():
-            return direct
-        if root.exists():
-            for workspace_dir in root.iterdir():
-                candidate = workspace_dir / path
-                if candidate.exists():
-                    return candidate
-    raise FileNotFoundError(f"Could not find Bazel runfile: {path}")
 
 
 def _make_mujoco_playground_family() -> RenderFamily:
     """Build the MuJoCo Playground official render comparison adapter."""
-    from etils import epath
     from jax import config as jax_config
 
     jax_config.update("jax_enable_x64", True)
 
     import mujoco
-    import mujoco_playground._src.mjx_env as oracle_mjx_env
-    from mujoco_playground._src.locomotion.apollo import (
-        joystick as oracle_apollo,
-    )
-    from mujoco_playground._src.locomotion.barkour import (
-        joystick as oracle_barkour,
-    )
-    from mujoco_playground._src.locomotion.berkeley_humanoid import (
-        joystick as oracle_berkeley,
-    )
-    from mujoco_playground._src.locomotion.g1 import joystick as oracle_g1
-    from mujoco_playground._src.locomotion.go1 import getup as oracle_getup
-    from mujoco_playground._src.locomotion.go1 import (
-        handstand as oracle_handstand,
-    )
-    from mujoco_playground._src.locomotion.go1 import joystick as oracle_go1
-    from mujoco_playground._src.locomotion.h1 import (
-        inplace_gait_tracking as oracle_h1_inplace,
-    )
-    from mujoco_playground._src.locomotion.h1 import (
-        joystick_gait_tracking as oracle_h1_joystick,
-    )
-    from mujoco_playground._src.locomotion.op3 import joystick as oracle_op3
-    from mujoco_playground._src.locomotion.spot import (
-        getup as oracle_spot_getup,
-    )
-    from mujoco_playground._src.locomotion.spot import (
-        joystick as oracle_spot_joystick,
-    )
-    from mujoco_playground._src.locomotion.spot import (
-        joystick_gait_tracking as oracle_spot_gait,
-    )
-    from mujoco_playground._src.locomotion.t1 import joystick as oracle_t1
-    from mujoco_playground._src.manipulation.aero_hand import (
-        rotate_z as oracle_aero_rotate,
-    )
-    from mujoco_playground._src.manipulation.aloha import (
-        handover as oracle_aloha_handover,
-    )
-    from mujoco_playground._src.manipulation.aloha import (
-        single_peg_insertion as oracle_aloha_peg,
-    )
-    from mujoco_playground._src.manipulation.franka_emika_panda import (
-        open_cabinet as oracle_panda_open_cabinet,
-    )
-    from mujoco_playground._src.manipulation.franka_emika_panda import (
-        pick as oracle_panda_pick,
-    )
-    from mujoco_playground._src.manipulation.franka_emika_panda import (
-        pick_cartesian as oracle_panda_pick_cartesian,
-    )
-    from mujoco_playground._src.manipulation.franka_emika_panda_robotiq import (
-        push_cube as oracle_panda_robotiq,
-    )
-    from mujoco_playground._src.manipulation.leap_hand import (
-        reorient as oracle_leap_reorient,
-    )
-    from mujoco_playground._src.manipulation.leap_hand import (
-        rotate_z as oracle_leap_rotate,
-    )
 
     import envpool.mujoco.playground.registration as playground_registration
+    from envpool.mujoco.playground.oracle import (
+        FrameRenderer,
+        make_oracle,
+        native_config,
+    )
+    from envpool.mujoco.render_oracle import configure_macos_mujoco_renderer
     from envpool.registration import make_gymnasium
 
-    oracle_mjx_env.MENAGERIE_PATH = epath.Path(
-        _find_runfile("mujoco_menagerie_playground")
-    )
+    configure_macos_mujoco_renderer()
 
-    def make_oracle(task_id: str) -> Any:
-        if task_id == "AlohaHandOver-v1":
-            config = oracle_aloha_handover.default_config()
-            config.impl = "jax"
-            return oracle_aloha_handover.HandOver(config=config)
-        if task_id == "AlohaSinglePegInsertion-v1":
-            config = oracle_aloha_peg.default_config()
-            config.impl = "jax"
-            return oracle_aloha_peg.SinglePegInsertion(config=config)
-        if task_id == "ApolloJoystickFlatTerrain-v1":
-            config = oracle_apollo.default_config()
-            config.impl = "jax"
-            config.noise_config.level = 0.0
-            config.push_config.enable = False
-            config.command_config.min = [0.0, 0.0, 0.0]
-            config.command_config.max = [0.0, 0.0, 0.0]
-            config.command_config.zero_prob = [1.0, 1.0, 1.0]
-            return oracle_apollo.Joystick(task="flat_terrain", config=config)
-        if task_id == "BarkourJoystick-v1":
-            config = oracle_barkour.default_config()
-            config.impl = "jax"
-            config.obs_noise = -1.0
-            config.lin_vel_x = [0.0, 0.0]
-            config.lin_vel_y = [0.0, 0.0]
-            config.ang_vel_yaw = [0.0, 0.0]
-            config.kick_wait_steps = [100000, 100001]
-            return oracle_barkour.Joystick(config=config)
-        if task_id == "Op3Joystick-v1":
-            config = oracle_op3.default_config()
-            config.impl = "jax"
-            config.obs_noise = -1.0
-            config.lin_vel_x = [0.0, 0.0]
-            config.lin_vel_y = [0.0, 0.0]
-            config.ang_vel_yaw = [0.0, 0.0]
-            return oracle_op3.Joystick(config=config)
-        if task_id.startswith("BerkeleyHumanoid"):
-            config = oracle_berkeley.default_config()
-            config.impl = "jax"
-            config.noise_config.level = 0.0
-            config.push_config.enable = False
-            config.lin_vel_x = [0.0, 0.0]
-            config.lin_vel_y = [0.0, 0.0]
-            config.ang_vel_yaw = [0.0, 0.0]
-            task = (
-                "rough_terrain" if "RoughTerrain" in task_id else "flat_terrain"
-            )
-            return oracle_berkeley.Joystick(task=task, config=config)
-        if task_id in (
-            "G1JoystickFlatTerrain-v1",
-            "G1JoystickRoughTerrain-v1",
-        ):
-            config = oracle_g1.default_config()
-            config.impl = "jax"
-            config.noise_config.level = 0.0
-            config.push_config.enable = False
-            config.lin_vel_x = [0.0, 0.0]
-            config.lin_vel_y = [0.0, 0.0]
-            config.ang_vel_yaw = [0.0, 0.0]
-            task = (
-                "rough_terrain" if "RoughTerrain" in task_id else "flat_terrain"
-            )
-            return oracle_g1.Joystick(task=task, config=config)
-        if task_id in (
-            "T1JoystickFlatTerrain-v1",
-            "T1JoystickRoughTerrain-v1",
-        ):
-            config = oracle_t1.default_config()
-            config.impl = "jax"
-            config.noise_config.level = 0.0
-            config.push_config.enable = False
-            config.lin_vel_x = [0.0, 0.0]
-            config.lin_vel_y = [0.0, 0.0]
-            config.ang_vel_yaw = [0.0, 0.0]
-            task = (
-                "rough_terrain" if "RoughTerrain" in task_id else "flat_terrain"
-            )
-            return oracle_t1.Joystick(task=task, config=config)
-        if task_id == "H1InplaceGaitTracking-v1":
-            config = oracle_h1_inplace.default_config()
-            config.impl = "jax"
-            config.obs_noise.level = 0.0
-            return oracle_h1_inplace.InplaceGaitTracking(config=config)
-        if task_id == "H1JoystickGaitTracking-v1":
-            config = oracle_h1_joystick.default_config()
-            config.impl = "jax"
-            config.obs_noise.level = 0.0
-            config.lin_vel_x = [0.0, 0.0]
-            config.lin_vel_y = [0.0, 0.0]
-            config.ang_vel_yaw = [0.0, 0.0]
-            return oracle_h1_joystick.JoystickGaitTracking(config=config)
-        if task_id == "SpotFlatTerrainJoystick-v1":
-            config = oracle_spot_joystick.default_config()
-            config.impl = "jax"
-            config.obs_noise.scales.joint_pos = 0.0
-            config.obs_noise.scales.gyro = 0.0
-            config.obs_noise.scales.gravity = 0.0
-            config.obs_noise.scales.feet_pos = [0.0, 0.0, 0.0]
-            config.pert_config.enable = False
-            config.command_config.lin_vel_x = [0.0, 0.0]
-            config.command_config.lin_vel_y = [0.0, 0.0]
-            config.command_config.ang_vel_yaw = [0.0, 0.0]
-            return oracle_spot_joystick.Joystick(
-                task="flat_terrain", config=config
-            )
-        if task_id == "SpotGetup-v1":
-            config = oracle_spot_getup.default_config()
-            config.impl = "jax"
-            config.obs_noise.level = 0.0
-            return oracle_spot_getup.Getup(config=config)
-        if task_id == "SpotJoystickGaitTracking-v1":
-            config = oracle_spot_gait.default_config()
-            config.impl = "jax"
-            config.obs_noise.scales.joint_pos = 0.0
-            config.obs_noise.scales.gyro = 0.0
-            config.obs_noise.scales.gravity = 0.0
-            config.obs_noise.scales.feet_pos = [0.0, 0.0, 0.0]
-            config.command_config.lin_vel_x = [0.0, 0.0]
-            config.command_config.lin_vel_y = [0.0, 0.0]
-            config.command_config.ang_vel_yaw = [0.0, 0.0]
-            return oracle_spot_gait.JoystickGaitTracking(config=config)
-        if task_id == "PandaPickCube-v1":
-            config = oracle_panda_pick.default_config()
-            config.impl = "jax"
-            return oracle_panda_pick.PandaPickCube(config=config)
-        if task_id == "PandaPickCubeCartesian-v1":
-            config = oracle_panda_pick_cartesian.default_config()
-            config.impl = "jax"
-            return oracle_panda_pick_cartesian.PandaPickCubeCartesian(
-                config=config
-            )
-        if task_id == "PandaPickCubeOrientation-v1":
-            config = oracle_panda_pick.default_config()
-            config.impl = "jax"
-            return oracle_panda_pick.PandaPickCubeOrientation(config=config)
-        if task_id == "PandaOpenCabinet-v1":
-            config = oracle_panda_open_cabinet.default_config()
-            config.impl = "jax"
-            return oracle_panda_open_cabinet.PandaOpenCabinet(config=config)
-        if task_id == "PandaRobotiqPushCube-v1":
-            config = oracle_panda_robotiq.default_config()
-            config.impl = "jax"
-            config.noise_config.action_min_delay = 0
-            config.noise_config.action_max_delay = 1
-            config.noise_config.obs_min_delay = 0
-            config.noise_config.obs_max_delay = 1
-            config.noise_config.noise_scales.obj_pos = 0.0
-            config.noise_config.noise_scales.obj_angle = 0.0
-            config.noise_config.noise_scales.robot_qpos = 0.0
-            config.noise_config.noise_scales.robot_qvel = 0.0
-            config.noise_config.noise_scales.eef_pos = 0.0
-            config.noise_config.noise_scales.eef_angle = 0.0
-            return oracle_panda_robotiq.PandaRobotiqPushCube(config=config)
-        if task_id == "LeapCubeRotateZAxis-v1":
-            config = oracle_leap_rotate.default_config()
-            config.impl = "jax"
-            config.noise_config.level = 0.0
-            return oracle_leap_rotate.CubeRotateZAxis(config=config)
-        if task_id == "LeapCubeReorient-v1":
-            config = oracle_leap_reorient.default_config()
-            config.impl = "jax"
-            config.obs_noise.level = 0.0
-            config.pert_config.enable = False
-            return oracle_leap_reorient.CubeReorient(config=config)
-        if task_id == "AeroCubeRotateZAxis-v1":
-            config = oracle_aero_rotate.default_config()
-            config.noise_config.level = 0.0
-            return oracle_aero_rotate.CubeRotateZAxis(config=config)
-        if task_id == "Go1Getup-v1":
-            config = oracle_getup.default_config()
-            config.impl = "jax"
-            config.noise_config.level = 0.0
-            return oracle_getup.Getup(config=config)
-        if task_id == "Go1Handstand-v1":
-            config = oracle_handstand.default_config()
-            config.impl = "jax"
-            config.noise_config.level = 0.0
-            return oracle_handstand.Handstand(config=config)
-        if task_id == "Go1Footstand-v1":
-            config = oracle_handstand.default_config()
-            config.impl = "jax"
-            config.noise_config.level = 0.0
-            return oracle_handstand.Footstand(config=config)
-        config = oracle_go1.default_config()
-        config.impl = "jax"
-        config.noise_config.level = 0.0
-        config.command_config.a = [0.0, 0.0, 0.0]
-        config.command_config.b = [0.0, 0.0, 0.0]
-        task = "rough_terrain" if "RoughTerrain" in task_id else "flat_terrain"
-        return oracle_go1.Joystick(task=task, config=config)
-
-    def make_render_data(model_or_oracle: Any, info: dict[str, Any]) -> Any:
-        model = (
-            model_or_oracle
-            if isinstance(model_or_oracle, mujoco.MjModel)
-            else model_or_oracle.mj_model
-        )
+    def make_render_data(model: Any, info: dict[str, Any]) -> Any:
         data = mujoco.MjData(model)
         data.qpos[:] = info["qpos"][0, : model.nq]
         data.qvel[:] = info["qvel"][0, : model.nv]
@@ -1237,117 +387,6 @@ def _make_mujoco_playground_family() -> RenderFamily:
             data.sensordata[:] = info["sensordata"][0, : data.sensordata.size]
         return data
 
-    op3_render_model: mujoco.MjModel | None = None
-
-    def official_render_model(task_id: str, oracle: Any) -> Any:
-        nonlocal op3_render_model
-        if task_id != "Op3Joystick-v1":
-            return oracle
-        if op3_render_model is None:
-            xml_path = _find_runfile(
-                "envpool/mujoco/playground/assets/mujoco_playground/_src/"
-                "locomotion/op3/xmls/scene_mjx_feetonly.xml"
-            )
-            op3_render_model = mujoco.MjModel.from_xml_path(xml_path.as_posix())
-        return op3_render_model
-
-    def render_official_frame(
-        model_or_oracle: Any,
-        data: Any,
-        render_kwargs: dict[str, Any],
-    ) -> np.ndarray:
-        model = (
-            model_or_oracle
-            if isinstance(model_or_oracle, mujoco.MjModel)
-            else model_or_oracle.mj_model
-        )
-        renderer = mujoco.Renderer(
-            model,
-            height=render_kwargs["height"],
-            width=render_kwargs["width"],
-        )
-        try:
-            renderer.update_scene(data, camera=render_kwargs.get("camera", -1))
-            return np.asarray(renderer.render())
-        finally:
-            renderer.close()
-
-    def zero_command_kwargs(
-        *,
-        noise_key: str | None = "noise_level",
-        noise_value: float = 0.0,
-        disable_key: str | None = None,
-    ) -> dict[str, Any]:
-        kwargs: dict[str, Any] = {
-            "lin_vel_x_min": 0.0,
-            "lin_vel_x_max": 0.0,
-            "lin_vel_y_min": 0.0,
-            "lin_vel_y_max": 0.0,
-            "ang_vel_yaw_min": 0.0,
-            "ang_vel_yaw_max": 0.0,
-        }
-        if noise_key is not None:
-            kwargs[noise_key] = noise_value
-        if disable_key is not None:
-            kwargs[disable_key] = 0.0
-        return kwargs
-
-    def envpool_kwargs(task_id: str) -> dict[str, Any]:
-        if task_id.startswith("Apollo"):
-            return {
-                "noise_level": 0.0,
-                "push_enable": 0.0,
-                "command_min0": 0.0,
-                "command_min1": 0.0,
-                "command_min2": 0.0,
-                "command_max0": 0.0,
-                "command_max1": 0.0,
-                "command_max2": 0.0,
-                "command_zero_prob0": 1.0,
-                "command_zero_prob1": 1.0,
-                "command_zero_prob2": 1.0,
-            }
-        if task_id.startswith("Barkour"):
-            return {
-                **zero_command_kwargs(noise_key="obs_noise", noise_value=-1.0),
-                "kick_wait_steps_min": 100000,
-                "kick_wait_steps_max": 100001,
-            }
-        if task_id.startswith("Op3"):
-            return zero_command_kwargs(noise_key="obs_noise", noise_value=-1.0)
-        if task_id.startswith(("BerkeleyHumanoid", "G1", "T1")):
-            return zero_command_kwargs(disable_key="push_enable")
-        if task_id.startswith("H1"):
-            return zero_command_kwargs(noise_key="obs_noise_level")
-        if task_id == "SpotFlatTerrainJoystick-v1":
-            return zero_command_kwargs(disable_key="pert_enable")
-        if task_id == "SpotGetup-v1":
-            return {"noise_level": 0.0}
-        if task_id == "SpotJoystickGaitTracking-v1":
-            return zero_command_kwargs()
-        if task_id == "PandaPickCubeCartesian-v1":
-            return {"guide_sample_prob": 0.0}
-        if task_id == "PandaRobotiqPushCube-v1":
-            return {
-                "action_min_delay": 0,
-                "action_max_delay": 1,
-                "obs_min_delay": 0,
-                "obs_max_delay": 1,
-                "noise_obj_pos": 0.0,
-                "noise_obj_angle": 0.0,
-                "noise_robot_qpos": 0.0,
-                "noise_robot_qvel": 0.0,
-                "noise_eef_pos": 0.0,
-                "noise_eef_angle": 0.0,
-            }
-        if task_id in (
-            "LeapCubeRotateZAxis-v1",
-            "LeapCubeReorient-v1",
-            "AeroCubeRotateZAxis-v1",
-        ):
-            return {"noise_level": 0.0, "pert_enable": 0.0}
-        return {}
-
     def render_pair(
         task_id: str,
         cfg: RenderCompareConfig,
@@ -1360,31 +399,22 @@ def _make_mujoco_playground_family() -> RenderFamily:
             render_mode="rgb_array",
             render_width=cfg.source_width,
             render_height=cfg.source_height,
-            **envpool_kwargs(task_id),
+            **native_config(task_id),
         )
         try:
             _, info = env.reset()
-            render_model = official_render_model(task_id, oracle)
+            render_model = oracle.mj_model
             render_data = make_render_data(render_model, info)
-            render_kwargs: dict[str, Any] = {
-                "height": cfg.source_height,
-                "width": cfg.source_width,
-            }
-            if task_id.startswith((
-                "Apollo",
-                "Barkour",
-                "Berkeley",
-                "G1",
-                "Go1",
-                "H1",
-                "Op3",
-                "Spot",
-                "T1",
-            )):
-                render_kwargs["camera"] = "track"
-            official_frame = render_official_frame(
-                render_model, render_data, render_kwargs
+            renderer = FrameRenderer(
+                oracle,
+                task_id,
+                width=cfg.source_width,
+                height=cfg.source_height,
             )
+            try:
+                official_frame = renderer.render(render_data)
+            finally:
+                renderer.close()
             envpool_frame = env.render(env_ids=[0])
             if envpool_frame is None:
                 raise RuntimeError(f"{task_id} returned no EnvPool frame")

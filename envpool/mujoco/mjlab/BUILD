@@ -59,23 +59,15 @@ cc_library(
         "simulation.h",
         "terrain.h",
     ],
-    copts = select({
-        "//:windows": ["/fp:strict"],
-        "//conditions:default": ["-ffp-contract=off"],
-    }),
     data = [":assets"],
     deps = [
         "//third_party/mjlab:kernels",
         "@boost//:json",
-        "@mjlab_mkl//:math",
         "@mjlab_warp//:native",
         "@mujoco//:mujoco_lib",
         "@zlib",
         "@zstd",
-    ] + select({
-        "@platforms//cpu:arm64": ["@mjlab_sleef//:sleef"],
-        "//conditions:default": [],
-    }),
+    ],
 )
 
 cc_library(

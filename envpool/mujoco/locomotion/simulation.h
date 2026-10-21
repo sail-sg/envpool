@@ -81,8 +81,12 @@ class Simulation {
     return failure_ || (success_ && task_.task != Task::kTracking);
   }
   int Players() const { return players_; }
-  const std::vector<Observation>& Layout() const { return layout_; }
 #ifdef ENVPOOL_TEST
+  const std::vector<double>& ThrowInPosition() const {
+    return throw_in_position_;
+  }
+  int ReferenceClip() const { return clip_id_; }
+  int ReferenceStart() const { return reference_start_; }
   void SetResetState(const std::vector<double>& qpos,
                      const std::vector<double>& qvel,
                      const std::map<std::string, std::array<double, 3>>& geoms);
@@ -140,7 +144,7 @@ class Simulation {
 
   Options options_;
   TaskConfig task_;
-  RandomState random_, scene_random_;
+  envpool::Random random_;
   Scene scene_;
   std::unique_ptr<mjModel, decltype(&mj_deleteModel)> model_{nullptr,
                                                              mj_deleteModel};
@@ -158,6 +162,9 @@ class Simulation {
   double touch_time_{0}, first_touch_time_{0}, second_touch_time_{0};
   bool touched_once_{false}, touched_twice_{false};
   bool touch_timeout_{false}, randomize_touch_{false}, model_dirty_{false};
+#ifdef ENVPOOL_TEST
+  std::vector<double> throw_in_position_;
+#endif
   int ball_joint_{-1}, ball_geom_{-1};
   std::vector<int> geom_player_;
   std::array<bool, 2> goals_{}, goals_now_{};
@@ -166,7 +173,6 @@ class Simulation {
   std::shared_ptr<const MocapData> mocap_;
   int clip_id_{0}, reference_step_{0}, reference_start_{0};
   std::vector<std::pair<int, int>> possible_starts_;
-  std::vector<double> start_cdf_;
   Features tracking_features_, previous_features_, tracking_observations_;
   int players_, steps_{0};
   bool done_{true}, truncated_{false}, failure_{false}, success_{false};

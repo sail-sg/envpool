@@ -13,7 +13,6 @@
 # limitations under the License.
 """Step-level oracle acceptance for every public game and reset mode."""
 
-import platform
 from typing import Any
 
 import numpy as np
@@ -21,6 +20,9 @@ from absl.testing import absltest, parameterized
 
 import envpool.craftax.registration  # noqa: F401
 from envpool.craftax.oracle import (
+    assert_floats,
+    assert_pixels,
+    assert_state,
     encode,
     factory_names,
     jax,
@@ -30,57 +32,6 @@ from envpool.craftax.oracle import (
     reset_info,
 )
 from envpool.registration import make_gymnasium
-
-
-def assert_observation(
-    actual: np.ndarray,
-    expected: Any,
-    task_id: str,
-    reset: bool,
-    sleeping: bool = False,
-) -> None:
-    """Keep only the pinned JAX graph's demonstrated FMA regions non-bitwise."""
-    expected = np.asarray(expected)
-    if "-Pixels-" not in task_id:
-        np.testing.assert_array_equal(actual, expected)
-        return
-
-    # Native float RGB matches the standalone official renderer bitwise.
-    # JAX 0.11.1 changes the final blend from fma(day, rgb, (1-day)*night)
-    # to fma(1-day, night, day*rgb) in these reset/step graph regions:
-    # ARM64 Classic reset/non-AutoReset step: blue, four-pixel blocks (x<60).
-    # x86-64 Classic AutoReset step: red, including the scalar tail.
-    # x86-64 full reset: red/green, eight-pixel blocks (x<104).
-    # Reversing just that FMA reproduces the observed differences exactly on
-    # macOS, Linux (both architectures), and Windows. Sleep's grayscale
-    # propagates the Classic channel residual into RGB, except x86-64's
-    # green/blue scalar tail (x>=56). Keep runtime rendering independent of
-    # LLVM vector widths; constrain only those test pixels.
-    # Reciprocal normalization can turn one RGB ULP into two observation ULPs.
-    # Inventory, other channels/tails, state, reward, info, and uint8 render
-    # remain exact; docs/env/craftax.rst records the platform scope.
-    architecture = platform.machine().lower()
-    classic = "-Classic-" in task_id
-    auto = "-AutoReset-" in task_id
-    allowed = np.zeros(actual.shape, dtype=bool)
-    maxulp = 0
-    if architecture in ("arm64", "aarch64") and classic and (reset or not auto):
-        allowed[:49, :60, :] = sleeping
-        allowed[:49, :60, 2] = True
-        maxulp = 1 if reset and not sleeping else 2
-    elif architecture in ("amd64", "x86_64"):
-        if classic and auto and not reset:
-            allowed[:49, :56, 1:] = sleeping
-            allowed[:49, :, 0] = True
-            maxulp = 2
-        elif not classic and reset:
-            allowed[:90, :104, :2] = True
-            maxulp = 1
-    np.testing.assert_array_equal(actual[~allowed], expected[~allowed])
-    if maxulp:
-        np.testing.assert_array_max_ulp(
-            actual[allowed], expected[allowed], maxulp=maxulp
-        )
 
 
 class CraftaxAlignmentTest(parameterized.TestCase):
@@ -217,12 +168,9 @@ class CraftaxAlignmentTest(parameterized.TestCase):
         self.assertEqual(env.action_space.n, oracle.num_actions)
         # Default resets match without synchronization; directed fixtures use
         # only initial_state at the first reset, never a mid-episode write.
-        assert_observation(obs[0], expected_obs, task_id, True)
-        np.testing.assert_array_equal(info["state"][0], encode(state, layout))
-        np.testing.assert_array_equal(
-            np.asarray(env.render())[0],
-            np.asarray(render(state)).astype(np.uint8),
-        )
+        assert_floats(obs[0], expected_obs)
+        assert_state(info["state"][0], state, layout)
+        assert_pixels(np.asarray(env.render())[0], render(state))
         rng = np.random.default_rng(2026)
         done = False
         episodes = 0
@@ -249,16 +197,7 @@ class CraftaxAlignmentTest(parameterized.TestCase):
                     np.array([action], np.int32)
                 )
                 message = f"{task_id} step {t}, action {action}"
-                try:
-                    assert_observation(
-                        obs[0],
-                        expected_obs,
-                        task_id,
-                        reset or (auto and bool(expected_done)),
-                        bool(state.is_sleeping),
-                    )
-                except AssertionError as error:
-                    raise AssertionError(message) from error
+                assert_floats(obs[0], expected_obs, message)
                 np.testing.assert_array_equal(
                     reward[0], expected_reward, err_msg=message
                 )
@@ -267,18 +206,17 @@ class CraftaxAlignmentTest(parameterized.TestCase):
                     bool(expected_done),
                     message,
                 )
-                np.testing.assert_array_equal(
-                    info["state"][0], encode(state, layout), err_msg=message
-                )
+                assert_state(info["state"][0], state, layout, message)
                 for name, value in expected_info.items():
-                    np.testing.assert_array_equal(
-                        info[name][0], value, err_msg=message + " " + name
-                    )
+                    if name == "score":
+                        assert_floats(info[name][0], value, message + " score")
+                    else:
+                        np.testing.assert_array_equal(
+                            info[name][0], value, err_msg=message + " " + name
+                        )
                 if t % 29 == 0 or bool(expected_done):
-                    np.testing.assert_array_equal(
-                        np.asarray(env.render())[0],
-                        np.asarray(render(state)).astype(np.uint8),
-                        err_msg=message,
+                    assert_pixels(
+                        np.asarray(env.render())[0], render(state), message
                     )
                 done = bool(expected_done)
                 episodes += done
@@ -289,7 +227,7 @@ class CraftaxAlignmentTest(parameterized.TestCase):
                 key, draw = jax.random.split(key)
                 expected_obs, state = oracle.reset(draw, params)
                 obs, info = env.reset()
-                assert_observation(obs[0], expected_obs, task_id, True)
+                assert_floats(obs[0], expected_obs)
                 np.testing.assert_array_equal(
                     info["state"][0], encode(state, layout)
                 )

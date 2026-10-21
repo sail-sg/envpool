@@ -327,6 +327,7 @@ class LevelBasedForagingEnv : public Env<LevelBasedForagingEnvSpec>,
 
   void WriteState(float reward) {
     auto state = Allocate();
+    state["trunc"_] = done_ && !AllFoodEaten();
     for (int viewer = 0; viewer < lbf::kNumAgents; ++viewer) {
       int cursor = 0;
       for (int food = 0; food < lbf::kNumFood; ++food) {

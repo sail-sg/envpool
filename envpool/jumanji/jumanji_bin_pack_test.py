@@ -78,6 +78,34 @@ class JumanjiBinPackTest(absltest.TestCase):
         finally:
             env.close()
 
+    def test_render_preserves_item_dimensions(self) -> None:
+        """Different box dimensions must not render as equal count markers."""
+        widths = []
+        for length in (0.2, 0.7):
+            env = make_gymnasium(
+                "BinPack-v2",
+                num_envs=1,
+                seed=0,
+                render_mode="rgb_array",
+                bin_pack_item_x_len=",".join(map(str, [length] * 20)),
+                bin_pack_item_y_len=",".join(["0.2"] * 20),
+                bin_pack_item_z_len=",".join(["0.2"] * 20),
+                bin_pack_items_mask=",".join(["1"] + ["0"] * 19),
+            )
+            try:
+                env.reset()
+                env.step(np.asarray([[0, 0]], dtype=np.int32))
+                rendered = env.render()
+                assert rendered is not None
+                frame = rendered[0].astype(np.int16)
+                # The container is gray; isolate the colored placed box.
+                rows, columns = np.nonzero(np.ptp(frame, axis=-1) > 30)
+                self.assertNotEmpty(rows)
+                widths.append(np.ptp(columns))
+            finally:
+                env.close()
+        self.assertGreater(widths[1], 2 * widths[0])
+
 
 if __name__ == "__main__":
     absltest.main()

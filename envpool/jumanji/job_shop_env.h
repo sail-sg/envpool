@@ -39,26 +39,18 @@ constexpr int kNoJob = 20;
 constexpr int kTimeLimit = 1000;
 constexpr int kOpsSize = kNumJobs * kNumOps;
 constexpr int kActionMaskSize = kNumMachines * (kNoJob + 1);
-constexpr int kReplaySteps = 32;
 
 }  // namespace jobshop
 
 class JobShopEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict(
-        "job_shop_ops_machine_ids"_.Bind(std::string("")),
-        "job_shop_ops_durations"_.Bind(std::string("")),
-        "job_shop_ops_mask"_.Bind(std::string("")),
-        "job_shop_machines_job_ids"_.Bind(std::string("")),
-        "job_shop_machines_remaining_times"_.Bind(std::string("")),
-        "job_shop_action_mask"_.Bind(std::string("")),
-        "job_shop_replay_ops_mask"_.Bind(std::string("")),
-        "job_shop_replay_machines_job_ids"_.Bind(std::string("")),
-        "job_shop_replay_machines_remaining_times"_.Bind(std::string("")),
-        "job_shop_replay_action_mask"_.Bind(std::string("")),
-        "job_shop_replay_rewards"_.Bind(std::string("")),
-        "job_shop_render_scheduled_times_replay"_.Bind(std::string("")));
+    return MakeDict("job_shop_ops_machine_ids"_.Bind(std::string("")),
+                    "job_shop_ops_durations"_.Bind(std::string("")),
+                    "job_shop_ops_mask"_.Bind(std::string("")),
+                    "job_shop_machines_job_ids"_.Bind(std::string("")),
+                    "job_shop_machines_remaining_times"_.Bind(std::string("")),
+                    "job_shop_action_mask"_.Bind(std::string("")));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
@@ -93,17 +85,9 @@ class JobShopEnv : public Env<JobShopEnvSpec>, public RenderableEnv {
   std::array<int, jobshop::kNumMachines> configured_machine_job_ids_{};
   std::array<int, jobshop::kNumMachines> configured_machine_remaining_times_{};
   std::array<bool, jobshop::kActionMaskSize> configured_action_mask_{};
-  std::array<bool, jobshop::kReplaySteps * jobshop::kOpsSize> replay_op_mask_{};
-  std::array<int, jobshop::kReplaySteps * jobshop::kNumMachines>
-      replay_machine_job_ids_{};
-  std::array<int, jobshop::kReplaySteps * jobshop::kNumMachines>
-      replay_machine_remaining_times_{};
-  std::array<bool, jobshop::kReplaySteps * jobshop::kActionMaskSize>
-      replay_action_mask_{};
-  std::array<float, jobshop::kReplaySteps> replay_rewards_{};
   bool use_configured_ops_;
   bool use_configured_action_mask_;
-  bool use_replay_;
+  std::array<int, jobshop::kOpsSize> start_times_{};
   int step_count_{0};
   bool done_{true};
 
@@ -126,25 +110,9 @@ class JobShopEnv : public Env<JobShopEnvSpec>, public RenderableEnv {
                 spec.config["job_shop_machines_remaining_times"_])),
         configured_action_mask_(parse::CsvArray<bool, jobshop::kActionMaskSize>(
             spec.config["job_shop_action_mask"_])),
-        replay_op_mask_(
-            parse::CsvArray<bool, jobshop::kReplaySteps * jobshop::kOpsSize>(
-                spec.config["job_shop_replay_ops_mask"_])),
-        replay_machine_job_ids_(
-            parse::CsvArray<int, jobshop::kReplaySteps * jobshop::kNumMachines>(
-                spec.config["job_shop_replay_machines_job_ids"_],
-                jobshop::kNoJob)),
-        replay_machine_remaining_times_(
-            parse::CsvArray<int, jobshop::kReplaySteps * jobshop::kNumMachines>(
-                spec.config["job_shop_replay_machines_remaining_times"_])),
-        replay_action_mask_(parse::CsvArray<bool, jobshop::kReplaySteps *
-                                                      jobshop::kActionMaskSize>(
-            spec.config["job_shop_replay_action_mask"_])),
-        replay_rewards_(parse::CsvArray<float, jobshop::kReplaySteps>(
-            spec.config["job_shop_replay_rewards"_])),
         use_configured_ops_(!spec.config["job_shop_ops_machine_ids"_].empty()),
         use_configured_action_mask_(
-            !spec.config["job_shop_action_mask"_].empty()),
-        use_replay_(!spec.config["job_shop_replay_ops_mask"_].empty()) {}
+            !spec.config["job_shop_action_mask"_].empty()) {}
 
   bool IsDone() override { return done_; }
 
@@ -159,36 +127,34 @@ class JobShopEnv : public Env<JobShopEnvSpec>, public RenderableEnv {
   void Render(int width, int height, int /*camera_id*/,
               unsigned char* rgb) override {
     render::Clear(width, height, render::kWhite, rgb);
-    const int row_h = std::max(1, height / jobshop::kNumMachines);
-    for (int machine = 0; machine < jobshop::kNumMachines; ++machine) {
-      render::DrawLine(width, height, 0, machine * row_h, width - 1,
-                       machine * row_h, {230, 230, 230}, rgb);
-      const int job = machine_job_ids_[machine];
-      const int bar_w = job == jobshop::kNoJob
-                            ? 0
-                            : width * machine_remaining_times_[machine] / 6;
-      if (bar_w > 0) {
-        render::FillRect(width, height, 0, machine * row_h + 2, bar_w,
-                         (machine + 1) * row_h - 2, render::Palette(job), rgb);
+    int horizon = std::max(1, step_count_);
+    for (int op = 0; op < jobshop::kOpsSize; ++op) {
+      if (start_times_[op] >= 0) {
+        horizon = std::max(horizon, start_times_[op] + op_durations_[op]);
       }
     }
-    int completed = 0;
-    for (int job = 0; job < jobshop::kNumJobs; ++job) {
-      completed += static_cast<int>(NextOperation(job) < 0 && !JobBusy(job));
-    }
-    const int completed_w =
-        std::clamp(width * completed / jobshop::kNumJobs, 0, width);
-    if (completed_w > 0) {
-      render::FillRect(width, height, 0, 0, completed_w, row_h, {60, 190, 90},
+    for (int machine = 0; machine < jobshop::kNumMachines; ++machine) {
+      const int top = machine * height / jobshop::kNumMachines;
+      const int bottom = (machine + 1) * height / jobshop::kNumMachines;
+      render::DrawLine(width, height, 0, top, width - 1, top, {230, 230, 230},
                        rgb);
+      for (int op = 0; op < jobshop::kOpsSize; ++op) {
+        if (start_times_[op] >= 0 && op_machine_ids_[op] == machine) {
+          const int left = start_times_[op] * width / horizon;
+          const int right =
+              (start_times_[op] + op_durations_[op]) * width / horizon;
+          render::FillRect(width, height, left, top + 2, right, bottom - 2,
+                           render::Palette(op / jobshop::kNumOps), rgb);
+        }
+      }
     }
-    const int right = width;
-    const int bottom = height;
-    render::StrokeRect(width, height, 0, 0, right, bottom, {210, 210, 210},
-                       rgb);
+    const int now = std::min(width - 1, step_count_ * width / horizon);
+    render::DrawLine(width, height, now, 0, now, height - 1, render::kBlack,
+                     rgb);
   }
 
   void Reset() override {
+    start_times_.fill(-1);
     op_machine_ids_.fill(-1);
     op_durations_.fill(-1);
     op_mask_.fill(false);
@@ -219,12 +185,6 @@ class JobShopEnv : public Env<JobShopEnvSpec>, public RenderableEnv {
   }
 
   void Step(const Action& action) override {
-    if (use_replay_ && step_count_ < jobshop::kReplaySteps) {
-      ++step_count_;
-      done_ = false;
-      WriteState(replay_rewards_[step_count_ - 1]);
-      return;
-    }
     bool valid = true;
     std::array<int, jobshop::kNumMachines> operations{};
     operations.fill(-1);
@@ -247,6 +207,7 @@ class JobShopEnv : public Env<JobShopEnvSpec>, public RenderableEnv {
         machine_job_ids_[machine] = job;
         machine_remaining_times_[machine] = op_durations_[index];
         op_mask_[index] = false;
+        start_times_[index] = step_count_;
       } else if (machine_remaining_times_[machine] == 0) {
         machine_job_ids_[machine] = jobshop::kNoJob;
       }
@@ -305,35 +266,15 @@ class JobShopEnv : public Env<JobShopEnvSpec>, public RenderableEnv {
         const int index = job * jobshop::kNumOps + op;
         state["obs:ops_machine_ids"_](job, op) = op_machine_ids_[index];
         state["obs:ops_durations"_](job, op) = op_durations_[index];
-        state["obs:ops_mask"_](job, op) =
-            use_replay_ && step_count_ > 0 &&
-                    step_count_ <= jobshop::kReplaySteps
-                ? replay_op_mask_[(step_count_ - 1) * jobshop::kOpsSize + index]
-                : op_mask_[index];
+        state["obs:ops_mask"_](job, op) = op_mask_[index];
       }
     }
     for (int machine = 0; machine < jobshop::kNumMachines; ++machine) {
-      state["obs:machines_job_ids"_][machine] =
-          use_replay_ && step_count_ > 0 && step_count_ <= jobshop::kReplaySteps
-              ? replay_machine_job_ids_[(step_count_ - 1) *
-                                            jobshop::kNumMachines +
-                                        machine]
-              : machine_job_ids_[machine];
+      state["obs:machines_job_ids"_][machine] = machine_job_ids_[machine];
       state["obs:machines_remaining_times"_][machine] =
-          use_replay_ && step_count_ > 0 && step_count_ <= jobshop::kReplaySteps
-              ? replay_machine_remaining_times_[(step_count_ - 1) *
-                                                    jobshop::kNumMachines +
-                                                machine]
-              : machine_remaining_times_[machine];
+          machine_remaining_times_[machine];
       for (int job = 0; job <= jobshop::kNoJob; ++job) {
-        if (use_replay_ && step_count_ > 0 &&
-            step_count_ <= jobshop::kReplaySteps) {
-          state["obs:action_mask"_](machine, job) =
-              replay_action_mask_[((step_count_ - 1) * jobshop::kNumMachines +
-                                   machine) *
-                                      (jobshop::kNoJob + 1) +
-                                  job];
-        } else if (use_configured_action_mask_ && step_count_ == 0) {
+        if (use_configured_action_mask_ && step_count_ == 0) {
           state["obs:action_mask"_](machine, job) =
               configured_action_mask_[machine * (jobshop::kNoJob + 1) + job];
         } else {

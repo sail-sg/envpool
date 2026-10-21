@@ -25,77 +25,9 @@ import tempfile
 import types
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 from PIL import Image, ImageDraw
-
-_SYNC_STATE_KEYS = (
-    "qpos0",
-    "qvel0",
-    "act0",
-    "qacc0",
-    "qacc_warmstart0",
-    "ctrl",
-    "site_pos",
-    "site_quat",
-    "site_size",
-    "site_rgba",
-    "body_pos",
-    "body_quat",
-    "body_mass",
-    "geom_pos",
-    "geom_quat",
-    "geom_size",
-    "geom_rgba",
-    "geom_friction",
-    "geom_aabb",
-    "geom_rbound",
-    "geom_contype",
-    "geom_conaffinity",
-    "geom_type",
-    "geom_condim",
-    "hfield_data",
-    "mocap_pos",
-    "mocap_quat",
-    "fatigue_ma",
-    "fatigue_mr",
-    "fatigue_mf",
-    "fatigue_tl",
-)
-_SYNC_STATE_SIZES = {
-    "qpos0": "nq",
-    "qvel0": "nv",
-    "act0": "na",
-    "qacc0": "nv",
-    "qacc_warmstart0": "nv",
-    "ctrl": "nu",
-    "site_pos": "nsite3",
-    "site_quat": "nsite4",
-    "site_size": "nsite3",
-    "site_rgba": "nsite4",
-    "body_pos": "nbody3",
-    "body_quat": "nbody4",
-    "body_mass": "nbody",
-    "geom_pos": "ngeom3",
-    "geom_quat": "ngeom4",
-    "geom_size": "ngeom3",
-    "geom_rgba": "ngeom4",
-    "geom_friction": "ngeom3",
-    "geom_aabb": "ngeom6",
-    "geom_rbound": "ngeom",
-    "geom_contype": "ngeom",
-    "geom_conaffinity": "ngeom",
-    "geom_type": "ngeom",
-    "geom_condim": "ngeom",
-    "hfield_data": "nhfielddata",
-    "mocap_pos": "nmocap3",
-    "mocap_quat": "nmocap4",
-    "fatigue_ma": "nu",
-    "fatigue_mr": "nu",
-    "fatigue_mf": "nu",
-    "fatigue_tl": "nu",
-}
 
 
 def _bootstrap_envpool_namespace() -> None:
@@ -201,6 +133,13 @@ def _envpool_trace_record(
         render_height=height,
     )
     try:
+        from envpool.mujoco.myosuite.oracle import (
+            sampled_state_from_info,
+        )
+        from envpool.mujoco.myosuite.oracle import (
+            sync_state_from_info as _sync_state_from_info,
+        )
+
         _, info = env.reset()
         frames = [env.render()[0]]
         infos: list[Mapping[str, object]] = [info]
@@ -216,8 +155,17 @@ def _envpool_trace_record(
             reset_before_step.append(elapsed_step == 0)
         plan = {
             "actions": actions,
+            "sampled_states": [
+                sampled_state_from_info(item) for item in infos[1:]
+            ],
             "reset_before_step": reset_before_step,
-            "sync_states": [_sync_state_from_info(item) for item in infos],
+            "sync_states": [_sync_state_from_info(infos[0])]
+            + [
+                _sync_state_from_info(item) if reset else {}
+                for item, reset in zip(
+                    infos[1:], reset_before_step, strict=False
+                )
+            ],
         }
         return frames, infos, plan
     finally:
@@ -275,40 +223,6 @@ def _oracle_probe_path() -> Path:
     raise RuntimeError(
         f"could not locate myosuite_oracle_probe under {runfiles}"
     )
-
-
-def _sync_state_from_info(info: Mapping[str, object]) -> dict[str, Any]:
-    dims = {
-        "nq": int(np.asarray(info["model_nq"]).ravel()[0]),
-        "nv": int(np.asarray(info["model_nv"]).ravel()[0]),
-        "na": int(np.asarray(info["model_na"]).ravel()[0]),
-        "nu": int(np.asarray(info["model_nu"]).ravel()[0]),
-        "nsite": int(np.asarray(info["model_nsite"]).ravel()[0]),
-        "nbody": int(np.asarray(info["model_nbody"]).ravel()[0]),
-        "ngeom": int(np.asarray(info["model_ngeom"]).ravel()[0]),
-        "nhfielddata": int(np.asarray(info["model_nhfielddata"]).ravel()[0]),
-        "nmocap": int(np.asarray(info["model_nmocap"]).ravel()[0]),
-    }
-    dims.update({
-        "nsite3": dims["nsite"] * 3,
-        "nsite4": dims["nsite"] * 4,
-        "nbody3": dims["nbody"] * 3,
-        "nbody4": dims["nbody"] * 4,
-        "ngeom3": dims["ngeom"] * 3,
-        "ngeom4": dims["ngeom"] * 4,
-        "ngeom6": dims["ngeom"] * 6,
-        "nmocap3": dims["nmocap"] * 3,
-        "nmocap4": dims["nmocap"] * 4,
-    })
-    sync_state = {}
-    for key in _SYNC_STATE_KEYS:
-        if key not in info:
-            continue
-        size = dims[_SYNC_STATE_SIZES[key]]
-        sync_state[key] = (
-            np.asarray(info[key][0], dtype=np.float64).ravel()[:size].tolist()
-        )
-    return sync_state
 
 
 def _oracle_trace(
@@ -661,8 +575,6 @@ def main() -> None:
         for task in _registered_tasks():
             task_id = str(task["id"])
             if traces is not None and task_id not in traces:
-                continue
-            if traces is None and bool(task["oracle_numpy2_broken"]):
                 continue
             task_order.append(task_id)
         if traces is None:

@@ -31,8 +31,8 @@ using Vec3 = std::array<float, 3>;
 using Quat = std::array<float, 4>;
 using Mat3 = std::array<float, 9>;
 
-float Sin(float v);
-float Cos(float v);
+inline float Sin(float v) { return std::sin(v); }
+inline float Cos(float v) { return std::cos(v); }
 inline float Exp(float v) { return std::exp(v); }
 inline float Log(float v) { return std::log(v); }
 inline float Acos(float v) { return std::acos(v); }
@@ -82,16 +82,6 @@ std::array<float, N> operator*(std::array<float, N> a, float b) {
 
 inline float Square(float value) { return value * value; }
 
-inline float MultiplyAdd(float a, float b, float c) {
-  // Preserve fused arithmetic for physical pose/velocity inputs. Contact
-  // dynamics can amplify a one-ULP perturbation of an applied impulse.
-#if defined(__linux__) || defined(__aarch64__)
-  return std::fma(a, b, c);
-#else
-  return a * b + c;
-#endif
-}
-
 template <typename Range, typename Transform>
 float Sum(const Range& values, Transform transform) {
   // Double accumulation limits rounding error without CPU-specific ordering.
@@ -118,9 +108,8 @@ float Norm(const std::array<float, N>& values) {
 }
 
 inline Vec3 Cross(const Vec3& a, const Vec3& b) {
-  return {MultiplyAdd(a[1], b[2], -a[2] * b[1]),
-          MultiplyAdd(a[2], b[0], -a[0] * b[2]),
-          MultiplyAdd(a[0], b[1], -a[1] * b[0])};
+  return {a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2],
+          a[0] * b[1] - a[1] * b[0]};
 }
 
 inline Quat Conjugate(const Quat& q) { return {q[0], -q[1], -q[2], -q[3]}; }
@@ -144,17 +133,10 @@ inline Vec3 RotateInverse(const Quat& q, const Vec3& v) {
 }
 
 inline Quat Multiply(const Quat& a, const Quat& b) {
-  // Keep the upstream expression for quaternions written into the simulator,
-  // including motion-file wrap and curriculum resets within long rollouts.
-  const float ww = (a[3] + a[1]) * (b[1] + b[2]);
-  const float yy = (a[0] - a[2]) * (b[0] + b[3]);
-  const float zz = (a[0] + a[2]) * (b[0] - b[3]);
-  const float xx = (ww + yy) + zz;
-  const float qq = 0.5F * (xx + (a[3] - a[1]) * (b[1] - b[2]));
-  return {(qq - ww) + (a[3] - a[2]) * (b[2] - b[3]),
-          (qq - xx) + (a[1] + a[0]) * (b[1] + b[0]),
-          (qq - yy) + (a[0] - a[1]) * (b[2] + b[3]),
-          (qq - zz) + (a[3] + a[2]) * (b[0] - b[1])};
+  return {a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3],
+          a[0] * b[1] + a[1] * b[0] + a[2] * b[3] - a[3] * b[2],
+          a[0] * b[2] - a[1] * b[3] + a[2] * b[0] + a[3] * b[1],
+          a[0] * b[3] + a[1] * b[2] - a[2] * b[1] + a[3] * b[0]};
 }
 
 inline Quat Euler(float roll, float pitch, float yaw) {
@@ -221,27 +203,21 @@ inline Quat Quaternion(const float* m) {
 class Random {
  public:
   explicit Random(uint32_t seed) : seed_(seed), engine_(seed) {}
-  uint32_t Next() {
-    ++draws_;
-    return engine_();
-  }
-  float Unit() { return static_cast<float>(Next() & 0xffffffU) * 0x1p-24F; }
+  float Unit() { return Uniform(0, 1); }
   float Uniform(float low, float high) {
-    return MultiplyAdd(Unit(), high - low, low);
+    return std::uniform_real_distribution<float>(low, high)(engine_);
   }
-  int Integer(int high) { return Next() % static_cast<uint32_t>(high); }
-  double UnitDouble() {
-    const uint64_t high = Next();
-    const uint64_t low = Next();
-    return static_cast<double>(((high << 32) | low) & ((1ULL << 53) - 1)) *
-           0x1p-53;
+  int Integer(int high) {
+    return std::uniform_int_distribution<int>(0, high - 1)(engine_);
+  }
+  int Choice(const std::vector<float>& weights) {
+    return std::discrete_distribution<int>(weights.begin(),
+                                           weights.end())(engine_);
   }
   uint32_t Seed() const { return seed_; }
-  uint64_t Draws() const { return draws_; }
 
  private:
   uint32_t seed_;
-  uint64_t draws_{0};
   std::mt19937 engine_;
 };
 

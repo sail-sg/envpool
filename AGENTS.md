@@ -22,6 +22,8 @@ strategy, and scope. Prefer the simplest sound way to establish correctness.
 
 ## Hard Rules
 
+- Keep execution plans local. Do not commit plan documents or include them in
+  pull requests.
 - Do not add a Python runtime bridge for environment logic.
 - Do not import the official Python environment inside C++ implementation code.
 - If there is an upstream family with multiple registered IDs, support all of
@@ -74,6 +76,13 @@ strategy, and scope. Prefer the simplest sound way to establish correctness.
 - Prefer ordinary native math. Do not copy a backend's reduction order, add
   platform-specific arithmetic, or pin test-only CPU/BLAS kernels solely to
   remove harmless last-bit differences.
+- The same principle applies to randomness: seed reproducibility does not
+  require matching NumPy, JAX, or Torch's PRNG, sampling algorithm, draw order,
+  or sampled sequence. Prefer existing native RNG facilities. Do not add or
+  retain backend compatibility machinery solely to simplify oracle comparison.
+  Preserve the task's sampling distributions, constraints, timing, and any
+  intentional temporal correlations; only an explicit public compatibility
+  contract justifies requiring a particular random sequence.
 - Justify floating-point tolerances from the computation, observed error, and
   task semantics. Keep them documented and sensitive to meaningful errors.
   Prefer a simple common criterion over accumulating backend, task, seed, or
@@ -219,12 +228,28 @@ seed or freezes its goals can still pass same-seed equality tests.
 
 When an official implementation exists, add oracle-based alignment tests.
 
+Follow the original native-state transfer pattern: the 2022
+[HalfCheetah implementation](https://github.com/sail-sg/envpool/blob/8cacab6c5a522704e7539b1a37a57bcf4fd1c888/envpool/mujoco/half_cheetah.h)
+uses standard C++ distributions and exports `info:qpos0` / `info:qvel0`;
+its test sets the oracle's state and then compares action-driven rollouts.
+Test-only hidden-state exports can use the existing `ENVPOOL_TEST` convention.
+
 Default standard:
 
-- synchronize internal state at most once immediately after reset if needed to
-  eliminate RNG/bootstrap differences between implementations
-- after that reset-time sync, drive both sides only with the same external
-  actions; do not resynchronize state mid-episode
+- expose the minimum semantic hidden state needed through EnvPool's `info`,
+  reusing existing fields. Copy that state into the oracle before stepping it
+  with the same external actions; prefer this over a compatible PRNG or a
+  separate shared-random-input framework
+- first check what each copied field means, how the native implementation
+  generates it, and whether copying it would bypass the behavior under test
+- prefer a reset-time copy when sufficient. Per-step hidden-state copies are
+  allowed when their correctness is checked separately. Document the copied
+  fields and what the oracle still computes independently; copied components
+  are not themselves verified merely because the oracle accepts them
+- compare each independently computed transition and its outputs before a
+  subsequent state copy can overwrite the result being checked. Distinguish
+  synchronized step checks from uninterrupted independent rollouts, and retain
+  native multi-step and unsynchronized checks for behavior that copying hides
 - exact shapes, dtypes, discrete values, agent IDs, masks, and
   terminated / truncated flags
 - numerical agreement for floating-point observations, rewards, state, and
@@ -248,9 +273,13 @@ Do not skip entire envs or platforms to get CI green.
 Do not replace state-sync oracle checks with long-horizon score-only checks.
 When a family already has older align tests, the new-task align setup should
 look the same unless a documented upstream difference forces a change.
-Reset-time synchronization can conceal missing native randomization; it does
+State synchronization can conceal missing native randomization; it does
 not replace the separate #432 checks above. Those checks must observe native
 resets without synchronizing or overwriting their state.
+Check the generation of copied hidden state separately, including relevant
+sampling bounds, distributions, independence, and temporal correlations, without
+requiring the oracle's exact sample sequence. Extend existing behavioral tests
+rather than adding a general replay framework or duplicating the implementation.
 
 ### 4. Render Test
 
@@ -328,10 +357,14 @@ Before opening or updating a PR, verify:
 - any tolerance is justified and scoped
 - no backend-specific math emulation or test-only CPU/BLAS pin exists merely
   to force bitwise oracle agreement
+- no PRNG, sampling-order, or random-sequence compatibility layer exists merely
+  for oracle comparison
 - cross-family changes address real correctness or necessary validation issues
   with the lowest-maintenance sound solution; no per-case exceptions exist
   solely to force bitwise or pixel identity
-- reset-time oracle state sync, if used, happens only once and is documented
+- hidden-state copies use minimal `info` fields, are justified and documented,
+  and do not replace the oracle outputs being checked; copied behavior has
+  separate correctness coverage
 - no score-only "correctness" gate is standing in for step-level alignment
 - no large env-specific patch blobs remain in `workspace0.bzl` or ad hoc
   `setup.py` logic

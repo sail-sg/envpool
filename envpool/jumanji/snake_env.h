@@ -22,6 +22,7 @@
 #include <cstddef>
 #include <random>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -91,8 +92,6 @@ class SnakeEnv : public Env<SnakeEnvSpec>, public RenderableEnv {
   snake::BodyState body_state_{};
   int head_row_{0};
   int head_col_{0};
-  int tail_row_{0};
-  int tail_col_{0};
   int fruit_row_{0};
   int fruit_col_{1};
   int configured_head_row_{0};
@@ -109,9 +108,15 @@ class SnakeEnv : public Env<SnakeEnvSpec>, public RenderableEnv {
 
   SnakeEnv(const Spec& spec, int env_id) : Env<SnakeEnvSpec>(spec, env_id) {
     std::tie(configured_head_row_, configured_head_col_) =
-        snake::ParsePosition(spec.config["snake_head_position"_], 0, 0);
+        snake::ParsePosition(spec.config["snake_head_position"_], -1, -1);
     std::tie(configured_fruit_row_, configured_fruit_col_) =
-        snake::ParsePosition(spec.config["snake_fruit_position"_], 0, 1);
+        snake::ParsePosition(spec.config["snake_fruit_position"_], -1, -1);
+    if (configured_head_row_ >= 0 &&
+        configured_head_row_ == configured_fruit_row_ &&
+        configured_head_col_ == configured_fruit_col_) {
+      throw std::invalid_argument(
+          "Snake head and fruit must occupy different cells");
+    }
   }
 
   bool IsDone() override { return done_; }
@@ -154,20 +159,20 @@ class SnakeEnv : public Env<SnakeEnvSpec>, public RenderableEnv {
     head_col_ = configured_head_col_;
     fruit_row_ = configured_fruit_row_;
     fruit_col_ = configured_fruit_col_;
-    if (spec_.config["snake_head_position"_].empty()) {
-      std::uniform_int_distribution<int> row_dist(0, snake::kRows - 1);
-      std::uniform_int_distribution<int> col_dist(0, snake::kCols - 1);
-      head_row_ = row_dist(gen_);
-      head_col_ = col_dist(gen_);
+    if (head_row_ < 0) {
+      std::uniform_int_distribution<int> cell(0, snake::kCellCount - 1);
       do {
-        fruit_row_ = row_dist(gen_);
-        fruit_col_ = col_dist(gen_);
-      } while (fruit_row_ == head_row_ && fruit_col_ == head_col_);
+        const int position = cell(gen_);
+        head_row_ = position / snake::kCols;
+        head_col_ = position % snake::kCols;
+      } while (head_row_ == fruit_row_ && head_col_ == fruit_col_);
     }
     length_ = 1;
     step_count_ = 0;
     body_state_[snake::Offset(head_row_, head_col_)] = 1;
-    UpdateTail();
+    if (fruit_row_ < 0) {
+      PlaceFruit();
+    }
     done_ = !AnyActionAvailable();
     WriteState(0.0f);
   }
@@ -176,29 +181,32 @@ class SnakeEnv : public Env<SnakeEnvSpec>, public RenderableEnv {
     const int action_id = std::clamp(static_cast<int>(action["action"_]), 0, 3);
     const bool valid = IsActionValid(action_id);
     float reward = 0.0f;
-    if (valid) {
-      const int next_row = head_row_ + snake::kMoves[action_id][0];
-      const int next_col = head_col_ + snake::kMoves[action_id][1];
-      const bool fruit_eaten = next_row == fruit_row_ && next_col == fruit_col_;
-      if (fruit_eaten) {
-        ++length_;
-        reward = 1.0f;
-      } else {
-        for (int& cell : body_state_) {
-          cell = std::max(0, cell - 1);
-        }
+    const int next_row = head_row_ + snake::kMoves[action_id][0];
+    const int next_col = head_col_ + snake::kMoves[action_id][1];
+    const bool fruit_eaten = next_row == fruit_row_ && next_col == fruit_col_;
+    if (fruit_eaten) {
+      ++length_;
+      reward = 1.0f;
+    } else {
+      for (int& cell : body_state_) {
+        cell = std::max(0, cell - 1);
       }
-      head_row_ = next_row;
-      head_col_ = next_col;
-      body_state_[snake::Offset(head_row_, head_col_)] = length_;
-      if (fruit_eaten) {
-        PlaceFruit();
-      }
-      UpdateTail();
     }
+    head_row_ = next_row;
+    head_col_ = next_col;
+    // The pinned terminal observation follows array-index semantics: negative
+    // coordinates wrap, while writes beyond the positive edge are dropped.
+    const int row = head_row_ < 0 ? head_row_ + snake::kRows : head_row_;
+    const int col = head_col_ < 0 ? head_col_ + snake::kCols : head_col_;
+    if (snake::InGrid(row, col)) {
+      body_state_[snake::Offset(row, col)] = length_;
+    }
+    if (fruit_eaten) {
+      PlaceFruit();
+    }
+
     ++step_count_;
-    done_ = !valid || IsComplete() || step_count_ >= snake::kTimeLimit ||
-            !AnyActionAvailable();
+    done_ = !valid || IsComplete() || step_count_ >= snake::kTimeLimit;
     WriteState(reward);
   }
 
@@ -227,51 +235,39 @@ class SnakeEnv : public Env<SnakeEnvSpec>, public RenderableEnv {
                        [](int value) { return value > 0; });
   }
 
-  void UpdateTail() {
-    for (int row = 0; row < snake::kRows; ++row) {
-      for (int col = 0; col < snake::kCols; ++col) {
-        if (body_state_[snake::Offset(row, col)] == 1) {
-          tail_row_ = row;
-          tail_col_ = col;
-          return;
-        }
-      }
-    }
-  }
-
   void PlaceFruit() {
-    std::vector<int> empty;
-    for (int i = 0; i < snake::kCellCount; ++i) {
-      if (body_state_[i] == 0) {
-        empty.push_back(i);
-      }
+    std::vector<float> empty(snake::kCellCount);
+    for (int cell = 0; cell < snake::kCellCount; ++cell) {
+      empty[cell] = body_state_[cell] == 0 ? 1.0f : 0.0f;
     }
-    if (empty.empty()) {
+    if (IsComplete()) {
       return;
     }
-    std::uniform_int_distribution<int> dist(0,
-                                            static_cast<int>(empty.size()) - 1);
-    const int offset = empty[dist(gen_)];
+    const int offset =
+        std::discrete_distribution<int>(empty.begin(), empty.end())(gen_);
     fruit_row_ = offset / snake::kCols;
     fruit_col_ = offset % snake::kCols;
   }
 
   void WriteState(float reward) {
     auto state = Allocate();
+    const int head_row = head_row_ < 0 ? head_row_ + snake::kRows : head_row_;
+    const int head_col = head_col_ < 0 ? head_col_ + snake::kCols : head_col_;
+    const int maximum =
+        std::max(1, *std::max_element(body_state_.begin(), body_state_.end()));
     for (int row = 0; row < snake::kRows; ++row) {
       for (int col = 0; col < snake::kCols; ++col) {
         const int offset = snake::Offset(row, col);
         const bool body = body_state_[offset] > 0;
         state["obs:grid"_](row, col, 0) = body ? 1.0f : 0.0f;
         state["obs:grid"_](row, col, 1) =
-            row == head_row_ && col == head_col_ ? 1.0f : 0.0f;
+            row == head_row && col == head_col ? 1.0f : 0.0f;
         state["obs:grid"_](row, col, 2) =
-            row == tail_row_ && col == tail_col_ ? 1.0f : 0.0f;
+            body_state_[offset] == 1 ? 1.0f : 0.0f;
         state["obs:grid"_](row, col, 3) =
             row == fruit_row_ && col == fruit_col_ ? 1.0f : 0.0f;
         state["obs:grid"_](row, col, 4) =
-            length_ > 0 ? static_cast<float>(body_state_[offset]) / length_
-                        : 0.0f;
+            static_cast<float>(body_state_[offset]) / maximum;
       }
     }
     state["obs:step_count"_] = step_count_;

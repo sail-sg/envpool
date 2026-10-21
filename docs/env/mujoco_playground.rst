@@ -261,7 +261,10 @@ The alignment test reset-syncs MuJoCo state once, then drives both
 implementations with the same external actions and compares observations,
 rewards, termination flags, truncation flags, and exposed info fields.
 
-Rendering is checked separately on reset and for the first three control steps
-against the official MuJoCo renderer using the same synchronized state. The
-test keeps per-task pixel budgets narrow because OpenGL rasterization can leave
-small backend-dependent edge differences even when the MuJoCo state is aligned.
+Each task runs for up to 128 control steps or its first termination, including
+render checks at reset and after stepping. Both sides advance their own MuJoCo
+state using the same source-built engine. The oracle calls the official task
+``step()`` and replaces only its physics integrator; expected observations and
+rewards never consume EnvPool's post-step state. Rendering retains scoped image budgets
+because OpenGL can leave small backend-dependent edge differences even when
+the physical state agrees.

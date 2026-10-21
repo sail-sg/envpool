@@ -16,7 +16,6 @@
 import ctypes
 import platform
 from functools import cache
-from typing import Any
 
 from dm_control import _render
 from dm_control._render import base as dm_control_render_base
@@ -80,7 +79,6 @@ def configure_macos_dm_control_renderer() -> None:
                 self._pixel_format = None
                 raise RuntimeError("failed to create CGL context")
             self._locked = False
-            self._frame_settled = False
 
         def _platform_make_current(self) -> None:
             from mujoco.cgl import cgl
@@ -109,23 +107,3 @@ def configure_macos_dm_control_renderer() -> None:
     _render.Renderer = _CglContext
     _render.BACKEND = "cgl"
     _render.USING_GPU = True
-
-    from dm_control.mujoco import engine
-
-    render_on_gl_thread = engine.Camera._render_on_gl_thread
-
-    def settled_render(camera: Any, depth: bool, overlays: Any) -> None:
-        render_on_gl_thread(camera, depth, overlays)
-        context = camera._physics.contexts.gl
-        if not context._frame_settled:
-            # Mirror OffscreenRenderer's sixteen CGL settle passes. Initial MSAA
-            # readbacks can change even with an identical scene (including the
-            # CMU side camera). The repeated draws reuse the same scene.
-            for _ in range(16):
-                render_on_gl_thread(camera, depth, overlays)
-            context._frame_settled = True
-        else:
-            # Later shadow readbacks also depend on the preceding draw history.
-            render_on_gl_thread(camera, depth, overlays)
-
-    engine.Camera._render_on_gl_thread = settled_render
