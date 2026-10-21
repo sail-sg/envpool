@@ -81,7 +81,6 @@ class Simulation {
     return failure_ || (success_ && task_.task != Task::kTracking);
   }
   int Players() const { return players_; }
-  const std::vector<Observation>& Layout() const { return layout_; }
 #ifdef ENVPOOL_TEST
   const std::vector<double>& ThrowInPosition() const {
     return throw_in_position_;

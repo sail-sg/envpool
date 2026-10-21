@@ -22,7 +22,6 @@ import subprocess
 import sys
 import unittest
 from contextlib import contextmanager
-from functools import lru_cache
 from pathlib import Path
 from typing import Any, Iterator
 from unittest import mock
@@ -81,14 +80,10 @@ import jax.numpy as jnp
 import mujoco
 import numpy as np
 from absl.testing import absltest
-from etils import epath
 from mujoco import mjx
 from mujoco_playground._src import locomotion as oracle_locomotion
 from mujoco_playground._src import manipulation as oracle_manipulation
 from mujoco_playground._src import mjx_env as oracle_mjx_env
-from mujoco_playground._src.locomotion.apollo import (
-    joystick as oracle_apollo,
-)
 from mujoco_playground._src.locomotion.barkour import (
     joystick as oracle_barkour,
 )
@@ -96,7 +91,6 @@ from mujoco_playground._src.locomotion.berkeley_humanoid import (
     joystick as oracle_berkeley,
 )
 from mujoco_playground._src.locomotion.g1 import joystick as oracle_g1
-from mujoco_playground._src.locomotion.go1 import getup as oracle_go1_getup
 from mujoco_playground._src.locomotion.go1 import (
     handstand as oracle_go1_handstand,
 )
@@ -120,16 +114,7 @@ from mujoco_playground._src.manipulation.aero_hand import (
     rotate_z as oracle_aero_rotate,
 )
 from mujoco_playground._src.manipulation.aloha import (
-    handover as oracle_aloha_handover,
-)
-from mujoco_playground._src.manipulation.aloha import (
     single_peg_insertion as oracle_aloha_peg,
-)
-from mujoco_playground._src.manipulation.franka_emika_panda import (
-    open_cabinet as oracle_panda_open_cabinet,
-)
-from mujoco_playground._src.manipulation.franka_emika_panda import (
-    pick as oracle_panda_pick,
 )
 from mujoco_playground._src.manipulation.franka_emika_panda import (
     pick_cartesian as oracle_panda_pick_cartesian,
@@ -145,7 +130,11 @@ from mujoco_playground._src.manipulation.leap_hand import (
 )
 
 import envpool.mujoco.playground.registration as playground_registration
-from envpool.mujoco.oracle import runfiles_repository
+from envpool.mujoco.playground.oracle import (
+    FrameRenderer,
+    find_runfile,
+    make_oracle,
+)
 from envpool.mujoco.render_oracle import configure_macos_mujoco_renderer
 from envpool.registration import make_gymnasium
 
@@ -300,271 +289,7 @@ def _shard_task_ids(task_ids: tuple[str, ...]) -> tuple[str, ...]:
     )
 
 
-def _is_primary_shard() -> bool:
-    index, _ = _bazel_shard()
-    return index == 0
-
-
 _TASK_IDS = _shard_task_ids(_FILTERED_TASK_IDS)
-
-
-def _candidate_runfile_roots() -> list[Path]:
-    roots: list[Path] = []
-    for env_name in ("TEST_SRCDIR", "RUNFILES_DIR"):
-        if os.environ.get(env_name):
-            roots.append(Path(os.environ[env_name]))
-    roots.append(Path.cwd())
-    roots.extend(Path(__file__).resolve().parents)
-    workspace = os.environ.get("TEST_WORKSPACE")
-    if workspace:
-        roots.extend(root / workspace for root in list(roots))
-    return roots
-
-
-@lru_cache
-def _runfiles_manifest_entries() -> tuple[tuple[str, Path], ...]:
-    manifest = os.environ.get("RUNFILES_MANIFEST_FILE")
-    if not manifest:
-        return ()
-    entries = []
-    with Path(manifest).open(encoding="utf-8") as f:
-        for line in f:
-            logical, sep, physical = line.rstrip("\n").partition(" ")
-            entries.append((logical, Path(physical if sep else logical)))
-    return tuple(entries)
-
-
-def _find_manifest_runfile(relative: str) -> Path | None:
-    relative = relative.replace("\\", "/")
-    candidates = [relative]
-    workspace = os.environ.get("TEST_WORKSPACE")
-    if workspace:
-        candidates.append(f"{workspace}/{relative}")
-    for logical, physical in _runfiles_manifest_entries():
-        for candidate in candidates:
-            if logical == candidate:
-                return physical
-            prefix = f"{candidate.rstrip('/')}/"
-            if logical.startswith(prefix):
-                path = physical
-                for _ in logical[len(prefix) :].split("/"):
-                    path = path.parent
-                return path
-    return None
-
-
-def _find_runfile(relative: str) -> Path:
-    manifest_path = _find_manifest_runfile(relative)
-    if manifest_path is not None:
-        return manifest_path
-    for root in _candidate_runfile_roots():
-        path = root / relative
-        if path.exists():
-            return path
-    raise FileNotFoundError(f"Could not find runfile {relative!r}")
-
-
-def _configure_oracle_assets() -> None:
-    oracle_mjx_env.MENAGERIE_PATH = epath.Path(
-        runfiles_repository("mujoco_menagerie_playground").as_posix()
-    )
-
-
-def _make_oracle(task_id: str) -> Any:
-    _configure_oracle_assets()
-    if task_id == "AlohaHandOver-v1":
-        config = oracle_aloha_handover.default_config()
-        config.impl = "jax"
-        return oracle_aloha_handover.HandOver(config=config)
-    if task_id == "AlohaSinglePegInsertion-v1":
-        config = oracle_aloha_peg.default_config()
-        config.impl = "jax"
-        return oracle_aloha_peg.SinglePegInsertion(config=config)
-    if task_id == "ApolloJoystickFlatTerrain-v1":
-        config = oracle_apollo.default_config()
-        config.impl = "jax"
-        config.noise_config.level = 0.0
-        config.push_config.enable = False
-        config.command_config.min = [0.0, 0.0, 0.0]
-        config.command_config.max = [0.0, 0.0, 0.0]
-        config.command_config.zero_prob = [1.0, 1.0, 1.0]
-        return oracle_apollo.Joystick(task="flat_terrain", config=config)
-    if task_id == "BarkourJoystick-v1":
-        config = oracle_barkour.default_config()
-        config.impl = "jax"
-        config.obs_noise = -1.0
-        config.lin_vel_x = [0.0, 0.0]
-        config.lin_vel_y = [0.0, 0.0]
-        config.ang_vel_yaw = [0.0, 0.0]
-        config.kick_wait_steps = [100000, 100001]
-        return oracle_barkour.Joystick(config=config)
-    if task_id == "Op3Joystick-v1":
-        config = oracle_op3.default_config()
-        config.impl = "jax"
-        config.obs_noise = -1.0
-        config.lin_vel_x = [0.0, 0.0]
-        config.lin_vel_y = [0.0, 0.0]
-        config.ang_vel_yaw = [0.0, 0.0]
-        # The assets-dict loader strips directories and aliases OP3 visual
-        # meshes with same-named collision meshes. Use the pinned file tree
-        # for the entire oracle, including its independent physics rollout.
-        xml = _find_runfile(
-            "envpool/mujoco/playground/assets/mujoco_playground/_src/"
-            "locomotion/op3/xmls/scene_mjx_feetonly.xml"
-        )
-        with mock.patch.object(
-            mujoco.MjModel,
-            "from_xml_string",
-            return_value=mujoco.MjModel.from_xml_path(xml.as_posix()),
-        ):
-            return oracle_op3.Joystick(config=config)
-    if task_id in (
-        "BerkeleyHumanoidJoystickFlatTerrain-v1",
-        "BerkeleyHumanoidJoystickRoughTerrain-v1",
-    ):
-        config = oracle_berkeley.default_config()
-        config.impl = "jax"
-        config.noise_config.level = 0.0
-        config.push_config.enable = False
-        config.lin_vel_x = [0.0, 0.0]
-        config.lin_vel_y = [0.0, 0.0]
-        config.ang_vel_yaw = [0.0, 0.0]
-        task = "rough_terrain" if "RoughTerrain" in task_id else "flat_terrain"
-        return oracle_berkeley.Joystick(task=task, config=config)
-    if task_id in (
-        "G1JoystickFlatTerrain-v1",
-        "G1JoystickRoughTerrain-v1",
-    ):
-        config = oracle_g1.default_config()
-        config.impl = "jax"
-        config.noise_config.level = 0.0
-        config.push_config.enable = False
-        config.lin_vel_x = [0.0, 0.0]
-        config.lin_vel_y = [0.0, 0.0]
-        config.ang_vel_yaw = [0.0, 0.0]
-        task = "rough_terrain" if "RoughTerrain" in task_id else "flat_terrain"
-        return oracle_g1.Joystick(task=task, config=config)
-    if task_id in (
-        "T1JoystickFlatTerrain-v1",
-        "T1JoystickRoughTerrain-v1",
-    ):
-        config = oracle_t1.default_config()
-        config.impl = "jax"
-        config.noise_config.level = 0.0
-        config.push_config.enable = False
-        config.lin_vel_x = [0.0, 0.0]
-        config.lin_vel_y = [0.0, 0.0]
-        config.ang_vel_yaw = [0.0, 0.0]
-        task = "rough_terrain" if "RoughTerrain" in task_id else "flat_terrain"
-        return oracle_t1.Joystick(task=task, config=config)
-    if task_id == "H1InplaceGaitTracking-v1":
-        config = oracle_h1_inplace.default_config()
-        config.impl = "jax"
-        config.obs_noise.level = 0.0
-        return oracle_h1_inplace.InplaceGaitTracking(config=config)
-    if task_id == "H1JoystickGaitTracking-v1":
-        config = oracle_h1_joystick.default_config()
-        config.impl = "jax"
-        config.obs_noise.level = 0.0
-        config.lin_vel_x = [0.0, 0.0]
-        config.lin_vel_y = [0.0, 0.0]
-        config.ang_vel_yaw = [0.0, 0.0]
-        return oracle_h1_joystick.JoystickGaitTracking(config=config)
-    if task_id == "SpotFlatTerrainJoystick-v1":
-        config = oracle_spot_joystick.default_config()
-        config.impl = "jax"
-        config.obs_noise.scales.joint_pos = 0.0
-        config.obs_noise.scales.gyro = 0.0
-        config.obs_noise.scales.gravity = 0.0
-        config.obs_noise.scales.feet_pos = [0.0, 0.0, 0.0]
-        config.pert_config.enable = False
-        config.command_config.lin_vel_x = [0.0, 0.0]
-        config.command_config.lin_vel_y = [0.0, 0.0]
-        config.command_config.ang_vel_yaw = [0.0, 0.0]
-        return oracle_spot_joystick.Joystick(task="flat_terrain", config=config)
-    if task_id == "SpotGetup-v1":
-        config = oracle_spot_getup.default_config()
-        config.impl = "jax"
-        config.obs_noise.level = 0.0
-        return oracle_spot_getup.Getup(config=config)
-    if task_id == "SpotJoystickGaitTracking-v1":
-        config = oracle_spot_gait.default_config()
-        config.impl = "jax"
-        config.obs_noise.scales.joint_pos = 0.0
-        config.obs_noise.scales.gyro = 0.0
-        config.obs_noise.scales.gravity = 0.0
-        config.obs_noise.scales.feet_pos = [0.0, 0.0, 0.0]
-        config.command_config.lin_vel_x = [0.0, 0.0]
-        config.command_config.lin_vel_y = [0.0, 0.0]
-        config.command_config.ang_vel_yaw = [0.0, 0.0]
-        return oracle_spot_gait.JoystickGaitTracking(config=config)
-    if task_id == "PandaPickCube-v1":
-        config = oracle_panda_pick.default_config()
-        config.impl = "jax"
-        return oracle_panda_pick.PandaPickCube(config=config)
-    if task_id == "PandaPickCubeCartesian-v1":
-        config = oracle_panda_pick_cartesian.default_config()
-        config.impl = "jax"
-        return oracle_panda_pick_cartesian.PandaPickCubeCartesian(config=config)
-    if task_id == "PandaPickCubeOrientation-v1":
-        config = oracle_panda_pick.default_config()
-        config.impl = "jax"
-        return oracle_panda_pick.PandaPickCubeOrientation(config=config)
-    if task_id == "PandaOpenCabinet-v1":
-        config = oracle_panda_open_cabinet.default_config()
-        config.impl = "jax"
-        return oracle_panda_open_cabinet.PandaOpenCabinet(config=config)
-    if task_id == "PandaRobotiqPushCube-v1":
-        config = oracle_panda_robotiq.default_config()
-        config.impl = "jax"
-        config.noise_config.action_min_delay = 0
-        config.noise_config.action_max_delay = 1
-        config.noise_config.obs_min_delay = 0
-        config.noise_config.obs_max_delay = 1
-        config.noise_config.noise_scales.obj_pos = 0.0
-        config.noise_config.noise_scales.obj_angle = 0.0
-        config.noise_config.noise_scales.robot_qpos = 0.0
-        config.noise_config.noise_scales.robot_qvel = 0.0
-        config.noise_config.noise_scales.eef_pos = 0.0
-        config.noise_config.noise_scales.eef_angle = 0.0
-        return oracle_panda_robotiq.PandaRobotiqPushCube(config=config)
-    if task_id == "LeapCubeRotateZAxis-v1":
-        config = oracle_leap_rotate.default_config()
-        config.impl = "jax"
-        config.noise_config.level = 0.0
-        return oracle_leap_rotate.CubeRotateZAxis(config=config)
-    if task_id == "LeapCubeReorient-v1":
-        config = oracle_leap_reorient.default_config()
-        config.impl = "jax"
-        config.obs_noise.level = 0.0
-        config.pert_config.enable = False
-        return oracle_leap_reorient.CubeReorient(config=config)
-    if task_id == "AeroCubeRotateZAxis-v1":
-        config = oracle_aero_rotate.default_config()
-        config.noise_config.level = 0.0
-        return oracle_aero_rotate.CubeRotateZAxis(config=config)
-    if task_id == "Go1Getup-v1":
-        config = oracle_go1_getup.default_config()
-        config.impl = "jax"
-        config.noise_config.level = 0.0
-        return oracle_go1_getup.Getup(config=config)
-    if task_id == "Go1Handstand-v1":
-        config = oracle_go1_handstand.default_config()
-        config.impl = "jax"
-        config.noise_config.level = 0.0
-        return oracle_go1_handstand.Handstand(config=config)
-    if task_id == "Go1Footstand-v1":
-        config = oracle_go1_handstand.default_config()
-        config.impl = "jax"
-        config.noise_config.level = 0.0
-        return oracle_go1_handstand.Footstand(config=config)
-    config = oracle_go1.default_config()
-    config.impl = "jax"
-    config.noise_config.level = 0.0
-    config.command_config.a = [0.0, 0.0, 0.0]
-    config.command_config.b = [0.0, 0.0, 0.0]
-    task = "rough_terrain" if "RoughTerrain" in task_id else "flat_terrain"
-    return oracle_go1.Joystick(task=task, config=config)
 
 
 def _make_actions(steps: int, action_size: int) -> np.ndarray:
@@ -1023,7 +748,7 @@ def _step_mujoco_oracle(
 @contextmanager
 def _oracle_physics(task_id: str) -> Iterator[Any]:
     """Keep sensitive mesh contacts on one C engine, with checked models."""
-    oracle = _make_oracle(task_id)
+    oracle = make_oracle(task_id)
     if platform.system() != "Linux" or not isinstance(
         oracle, (oracle_g1.Joystick, oracle_berkeley.Joystick)
     ):
@@ -1047,7 +772,7 @@ def _oracle_physics(task_id: str) -> Iterator[Any]:
         getattr(library, name).argtypes = [ctypes.c_void_p, ctypes.c_void_p]
         getattr(library, name).restype = None
     relative = Path(oracle.xml_path).relative_to(oracle_mjx_env.ROOT_PATH)
-    xml = _find_runfile(
+    xml = find_runfile(
         "envpool/mujoco/playground/assets/mujoco_playground/_src/"
         + relative.as_posix()
     )
@@ -1192,45 +917,6 @@ def _assert_frames_close(
         )
 
 
-def _official_render_camera(task_id: str) -> str | int:
-    if task_id.startswith((
-        "Apollo",
-        "Barkour",
-        "Berkeley",
-        "G1",
-        "Go1",
-        "H1",
-        "Op3",
-        "Spot",
-        "T1",
-    )):
-        return "track"
-    return -1
-
-
-class _OfficialFrameRenderer:
-    def __init__(self, oracle: Any, task_id: str):
-        model = oracle.mj_model
-        # Match native buffer dimensions: skybox projection on CGL depends on
-        # the full offscreen buffer, not just the requested output viewport.
-        model.vis.global_.offwidth = _RENDER_WIDTH
-        model.vis.global_.offheight = _RENDER_HEIGHT
-        self._camera = _official_render_camera(task_id)
-        self._renderer = mujoco.Renderer(
-            model, height=_RENDER_HEIGHT, width=_RENDER_WIDTH
-        )
-
-    def render(self, data: mujoco.MjData) -> np.ndarray:
-        # MuJoCo builds infinite-plane geometry before updating the camera.
-        # Refresh that geometry at the selected camera before the single draw.
-        self._renderer.update_scene(data, camera=self._camera)
-        self._renderer.update_scene(data, camera=self._camera)
-        return self._renderer.render()
-
-    def close(self) -> None:
-        self._renderer.close()
-
-
 def _assert_rollout_outputs_close(
     test: absltest.TestCase,
     task_id: str,
@@ -1327,14 +1013,19 @@ class PlaygroundOracleAlignTest(absltest.TestCase):
                     **_env_config(task_id),
                 )
                 actions = _make_actions(_ROLLOUT_STEPS, oracle.action_size)
-                official_renderer: _OfficialFrameRenderer | None = None
+                official_renderer: FrameRenderer | None = None
                 try:
                     obs, info = env.reset()
                     state = oracle.reset(jax.random.PRNGKey(0))
                     state = _sync_oracle_state(oracle, state, info)
                     mujoco_data = _make_mujoco_data_from_info(oracle, info)
                     _assert_obs_close(self, task_id, obs, state.obs)
-                    official_renderer = _OfficialFrameRenderer(oracle, task_id)
+                    official_renderer = FrameRenderer(
+                        oracle,
+                        task_id,
+                        width=_RENDER_WIDTH,
+                        height=_RENDER_HEIGHT,
+                    )
                     rendered = env.render(env_ids=[0])
                     assert rendered is not None
                     _assert_frames_close(

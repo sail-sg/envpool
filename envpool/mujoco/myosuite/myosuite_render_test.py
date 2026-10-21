@@ -20,7 +20,6 @@ import json
 import os
 import platform
 import subprocess
-import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -29,7 +28,10 @@ from typing import Any
 import numpy as np
 from absl.testing import absltest
 
-from envpool.mujoco.myosuite.oracle import sampled_state_from_info
+from envpool.mujoco.myosuite.oracle import (
+    oracle_probe_cmd,
+    sampled_state_from_info,
+)
 from envpool.mujoco.myosuite.oracle import (
     sync_state_from_info as _sync_state_from_info,
 )
@@ -209,54 +211,6 @@ _SHARDED_NATIVE_RENDER_TASK_IDS = _render_shard_task_ids(
 )
 
 
-def _oracle_probe_path() -> Path:
-    runfiles = Path(os.environ["TEST_SRCDIR"])
-    workspace = os.environ.get("TEST_WORKSPACE", "envpool")
-    launcher_names: tuple[str, ...] = (
-        "myosuite_oracle_probe",
-        "myosuite_oracle_probe.exe",
-    )
-    logical_suffixes = (
-        tuple(f"envpool/mujoco/{launcher}" for launcher in launcher_names)
-        + launcher_names
-    )
-    manifest = os.environ.get("RUNFILES_MANIFEST_FILE")
-    if manifest:
-        with Path(manifest).open(encoding="utf-8") as f:
-            for line in f:
-                logical, _, physical = line.rstrip("\n").partition(" ")
-                logical = logical.replace("\\", "/")
-                if any(logical.endswith(suffix) for suffix in logical_suffixes):
-                    candidate = Path(physical or logical)
-                    if candidate.is_file():
-                        return candidate
-    candidates = [
-        runfiles / workspace / "envpool/mujoco" / launcher
-        for launcher in launcher_names
-    ]
-    if sys.platform == "win32":
-        candidates.extend(
-            runfiles.parent / launcher for launcher in launcher_names
-        )
-    for candidate in candidates:
-        if candidate.is_file():
-            return candidate
-    for launcher in launcher_names:
-        for match in runfiles.rglob(launcher):
-            if match.is_file():
-                return match
-    raise RuntimeError(
-        f"could not locate myosuite_oracle_probe under {runfiles}"
-    )
-
-
-def _oracle_probe_cmd() -> list[str]:
-    path = _oracle_probe_path()
-    if sys.platform == "win32" and path.suffix.lower() != ".exe":
-        return [sys.executable, str(path)]
-    return [str(path)]
-
-
 def _oracle_trace(
     task_ids: tuple[str, ...],
     trace_plan: dict[str, dict[str, Any]],
@@ -266,7 +220,7 @@ def _oracle_trace(
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as plan:
         plan_path = Path(plan.name)
     plan_path.write_text(json.dumps(trace_plan, sort_keys=True))
-    cmd = _oracle_probe_cmd() + [
+    cmd = oracle_probe_cmd() + [
         "--mode",
         "trace",
         "--render",

@@ -104,7 +104,6 @@ class Scene {
   std::string maze_entities, maze_variations;
   std::array<double, 2> pitch_size{}, field_size{};
   std::array<double, 3> goal_size{};
-  const auto& VirtualFiles() const { return virtual_files_; }
 
  private:
   enum class RootJoint : std::uint8_t { kFixed, kFree, kSlides };

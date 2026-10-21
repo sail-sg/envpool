@@ -140,21 +140,11 @@ def _graph_coloring_edges(adj_matrix: Any) -> str:
 
 
 def _minesweeper_locations(official_state: Any) -> str:
-    if hasattr(official_state, "flat_mine_locations"):
-        return _csv_flat_int(official_state.flat_mine_locations)
-    locations = _as_numpy(official_state.mine_locations)
-    if locations.ndim == 2 and locations.shape[1] == 2:
-        locations = locations[:, 0] * 10 + locations[:, 1]
-    return ",".join(map(str, locations.astype(np.int64).reshape(-1)))
+    return _csv_flat_int(official_state.flat_mine_locations)
 
 
 def _minesweeper_flat_mines(official_state: Any) -> set[int]:
-    if hasattr(official_state, "flat_mine_locations"):
-        locations = _as_numpy(official_state.flat_mine_locations)
-    else:
-        locations = _as_numpy(official_state.mine_locations)
-        if locations.ndim == 2 and locations.shape[1] == 2:
-            locations = locations[:, 0] * 10 + locations[:, 1]
+    locations = _as_numpy(official_state.flat_mine_locations)
     return set(map(int, locations.astype(np.int64).reshape(-1)))
 
 

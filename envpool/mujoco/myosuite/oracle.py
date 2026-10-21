@@ -13,93 +13,122 @@
 # limitations under the License.
 """Native hidden-state transfer for MyoSuite validation and doc images."""
 
+from __future__ import annotations
+
+import os
+import sys
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 
-_SYNC_STATE_SIZES = {
-    "target_jnt_value": "nq",
-    "baoding_goal_parameters": "five",
-    "chase_task": "one",
-    "npc_parameters": "three",
-    "qpos0": "nq",
-    "qvel0": "nv",
-    "act0": "na",
-    "qacc0": "nv",
-    "qacc_warmstart0": "nv",
-    "ctrl": "nu",
-    "site_pos": "nsite3",
-    "site_quat": "nsite4",
-    "site_size": "nsite3",
-    "site_rgba": "nsite4",
-    "body_pos": "nbody3",
-    "body_quat": "nbody4",
-    "body_mass": "nbody",
-    "geom_pos": "ngeom3",
-    "geom_quat": "ngeom4",
-    "geom_size": "ngeom3",
-    "geom_rgba": "ngeom4",
-    "geom_friction": "ngeom3",
-    "geom_aabb": "ngeom6",
-    "geom_rbound": "ngeom",
-    "geom_contype": "ngeom",
-    "geom_conaffinity": "ngeom",
-    "geom_type": "ngeom",
-    "geom_condim": "ngeom",
-    "mesh_polymap": "nmeshpolymap",
-    "mesh_polynormal": "nmeshpoly3",
-    "mesh_polyvert": "nmeshpolyvert",
-    "mesh_polyvertadr": "nmeshpoly",
-    "mesh_polyvertnum": "nmeshpoly",
-    "hfield_data": "nhfielddata",
-    "mocap_pos": "nmocap3",
-    "mocap_quat": "nmocap4",
-    "fatigue_ma": "nu",
-    "fatigue_mr": "nu",
-    "fatigue_mf": "nu",
-    "fatigue_tl": "nu",
+
+def oracle_probe_cmd() -> list[str]:
+    """Locate the Bazel probe launcher, including Windows manifest layouts."""
+    path = _oracle_probe_path()
+    if sys.platform == "win32" and path.suffix.lower() != ".exe":
+        return [sys.executable, str(path)]
+    return [str(path)]
+
+
+def _oracle_probe_path() -> Path:
+    runfiles = Path(os.environ["TEST_SRCDIR"])
+    workspace = os.environ.get("TEST_WORKSPACE", "envpool")
+    launcher_names: tuple[str, ...] = (
+        "myosuite_oracle_probe",
+        "myosuite_oracle_probe.exe",
+    )
+    logical_suffixes = (
+        tuple(f"envpool/mujoco/{launcher}" for launcher in launcher_names)
+        + launcher_names
+    )
+    manifest = os.environ.get("RUNFILES_MANIFEST_FILE")
+    if manifest:
+        with Path(manifest).open(encoding="utf-8") as f:
+            for line in f:
+                logical, _, physical = line.rstrip("\n").partition(" ")
+                logical = logical.replace("\\", "/")
+                if any(logical.endswith(suffix) for suffix in logical_suffixes):
+                    candidate = Path(physical or logical)
+                    if candidate.is_file():
+                        return candidate
+    candidates = [
+        runfiles / workspace / "envpool/mujoco" / launcher
+        for launcher in launcher_names
+    ]
+    if sys.platform == "win32":
+        candidates.extend(
+            runfiles.parent / launcher for launcher in launcher_names
+        )
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    for launcher in launcher_names:
+        for match in runfiles.rglob(launcher):
+            if match.is_file():
+                return match
+    raise RuntimeError(
+        f"could not locate myosuite_oracle_probe under {runfiles}"
+    )
+
+
+_SYNC_STATE_SIZES: dict[str, tuple[str | None, int]] = {
+    "target_jnt_value": ("nq", 1),
+    "baoding_goal_parameters": (None, 5),
+    "chase_task": (None, 1),
+    "npc_parameters": (None, 3),
+    "qpos0": ("nq", 1),
+    "qvel0": ("nv", 1),
+    "act0": ("na", 1),
+    "qacc0": ("nv", 1),
+    "qacc_warmstart0": ("nv", 1),
+    "ctrl": ("nu", 1),
+    "site_pos": ("nsite", 3),
+    "site_quat": ("nsite", 4),
+    "site_size": ("nsite", 3),
+    "site_rgba": ("nsite", 4),
+    "body_pos": ("nbody", 3),
+    "body_quat": ("nbody", 4),
+    "body_mass": ("nbody", 1),
+    "geom_pos": ("ngeom", 3),
+    "geom_quat": ("ngeom", 4),
+    "geom_size": ("ngeom", 3),
+    "geom_rgba": ("ngeom", 4),
+    "geom_friction": ("ngeom", 3),
+    "geom_aabb": ("ngeom", 6),
+    "geom_rbound": ("ngeom", 1),
+    "geom_contype": ("ngeom", 1),
+    "geom_conaffinity": ("ngeom", 1),
+    "geom_type": ("ngeom", 1),
+    "geom_condim": ("ngeom", 1),
+    "mesh_polymap": ("nmeshpolymap", 1),
+    "mesh_polynormal": ("nmeshpoly", 3),
+    "mesh_polyvert": ("nmeshpolyvert", 1),
+    "mesh_polyvertadr": ("nmeshpoly", 1),
+    "mesh_polyvertnum": ("nmeshpoly", 1),
+    "hfield_data": ("nhfielddata", 1),
+    "mocap_pos": ("nmocap", 3),
+    "mocap_quat": ("nmocap", 4),
+    "fatigue_ma": ("nu", 1),
+    "fatigue_mr": ("nu", 1),
+    "fatigue_mf": ("nu", 1),
+    "fatigue_tl": ("nu", 1),
 }
 
 
 def sync_state_from_info(info: Mapping[str, Any]) -> dict[str, Any]:
     """Trim native reset state arrays for the official oracle."""
-    dims = {
-        "one": 1,
-        "five": 5,
-        "three": 3,
-        "nq": int(np.asarray(info["model_nq"]).ravel()[0]),
-        "nv": int(np.asarray(info["model_nv"]).ravel()[0]),
-        "na": int(np.asarray(info["model_na"]).ravel()[0]),
-        "nu": int(np.asarray(info["model_nu"]).ravel()[0]),
-        "nsite": int(np.asarray(info["model_nsite"]).ravel()[0]),
-        "nbody": int(np.asarray(info["model_nbody"]).ravel()[0]),
-        "ngeom": int(np.asarray(info["model_ngeom"]).ravel()[0]),
-        "nmeshpoly": int(np.asarray(info["model_nmeshpoly"]).ravel()[0]),
-        "nmeshpolyvert": int(
-            np.asarray(info["model_nmeshpolyvert"]).ravel()[0]
-        ),
-        "nmeshpolymap": int(np.asarray(info["model_nmeshpolymap"]).ravel()[0]),
-        "nhfielddata": int(np.asarray(info["model_nhfielddata"]).ravel()[0]),
-        "nmocap": int(np.asarray(info["model_nmocap"]).ravel()[0]),
-    }
-    dims.update({
-        "nmeshpoly3": dims["nmeshpoly"] * 3,
-        "nsite3": dims["nsite"] * 3,
-        "nsite4": dims["nsite"] * 4,
-        "nbody3": dims["nbody"] * 3,
-        "nbody4": dims["nbody"] * 4,
-        "ngeom3": dims["ngeom"] * 3,
-        "ngeom4": dims["ngeom"] * 4,
-        "ngeom6": dims["ngeom"] * 6,
-        "nmocap3": dims["nmocap"] * 3,
-        "nmocap4": dims["nmocap"] * 4,
-    })
     sync_state = {}
-    for key, dimension in _SYNC_STATE_SIZES.items():
+    for key, (dimension, width) in _SYNC_STATE_SIZES.items():
         if key not in info:
             continue
-        size = dims[dimension]
+        count = (
+            int(np.asarray(info[f"model_{dimension}"]).ravel()[0])
+            if dimension is not None
+            else 1
+        )
+        size = count * width
         sync_state[key] = np.asarray(info[key][0]).ravel()[:size].tolist()
     sampled = sampled_state_from_info(info)
     sampled.pop("npc_velocity", None)  # Reset precedes the first NPC command.

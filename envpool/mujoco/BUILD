@@ -652,27 +652,28 @@ py_test(
     ],
 )
 
+py_library(
+    name = "playground_oracle",
+    testonly = True,
+    srcs = ["playground/oracle.py"],
+    data = [
+        ":gen_mujoco_playground_assets",
+    ],
+    imports = ["../.."],
+    deps = [
+        ":mujoco_oracle",
+        "@mujoco_playground_source//:python",
+        requirement("etils"),
+        requirement("mujoco"),
+        requirement("numpy"),
+    ],
+)
+
 py_test(
     name = "playground_oracle_align_test",
     size = "enormous",
     srcs = ["playground/playground_oracle_align_test.py"],
-    data = [
-        "@mujoco//:mujoco_shared_lib",
-        "@mujoco_menagerie_playground//:aloha_assets",
-        "@mujoco_menagerie_playground//:apptronik_apollo_assets",
-        "@mujoco_menagerie_playground//:berkeley_humanoid_assets",
-        "@mujoco_menagerie_playground//:booster_t1_assets",
-        "@mujoco_menagerie_playground//:boston_dynamics_spot_assets",
-        "@mujoco_menagerie_playground//:franka_emika_panda_assets",
-        "@mujoco_menagerie_playground//:google_barkour_vb_assets",
-        "@mujoco_menagerie_playground//:leap_hand_assets",
-        "@mujoco_menagerie_playground//:robotiq_2f85_v4_assets",
-        "@mujoco_menagerie_playground//:robotis_op3_assets",
-        "@mujoco_menagerie_playground//:tetheria_aero_hand_open_assets",
-        "@mujoco_menagerie_playground//:unitree_g1_assets",
-        "@mujoco_menagerie_playground//:unitree_go1_assets",
-        "@mujoco_menagerie_playground//:unitree_h1_assets",
-    ],
+    data = ["@mujoco//:mujoco_shared_lib"],
     # This is an oracle correctness gate. Running it under rules_python
     # coverage adds substantial CI cost without useful EnvPool coverage signal.
     features = ["-coverage"],
@@ -682,11 +683,11 @@ py_test(
         ":mujoco_oracle",
         ":mujoco_render_oracle",
         ":playground",
+        ":playground_oracle",
         ":playground_registration",
         "//envpool/python:glfw_context",
         "@mujoco_playground_source//:python",
         requirement("absl-py"),
-        requirement("etils"),
         requirement("jax"),
         requirement("mujoco"),
         requirement("mujoco-mjx"),

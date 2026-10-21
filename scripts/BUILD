@@ -31,11 +31,10 @@ py_binary(
         "//envpool/mujoco:metaworld",
         "//envpool/mujoco:metaworld_registration",
         "//envpool/mujoco:playground",
+        "//envpool/mujoco:playground_oracle",
         "//envpool/mujoco:playground_registration",
         "//envpool/python:glfw_context",
         "@metaworld_assets//:metaworld_oracle",
-        "@mujoco_playground_source//:python",
-        requirement("etils"),
         requirement("gymnasium"),
         requirement("jax"),
         requirement("imageio"),
@@ -49,6 +48,16 @@ py_binary(
         jumanji_oracle_requirement("pillow"),
         jumanji_oracle_requirement("requests"),
     ],
+)
+
+py_test(
+    name = "render_compare_test",
+    size = "enormous",
+    srcs = ["render_compare_test.py"],
+    # Official Python rendering is validation, not native coverage.
+    features = ["-coverage"],
+    imports = [".."],
+    deps = [":render_compare"],
 )
 
 py_test(
