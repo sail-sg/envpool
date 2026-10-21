@@ -16,11 +16,8 @@
 from __future__ import annotations
 
 import importlib
-import json
 import os
 import platform
-import subprocess
-import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
@@ -29,7 +26,7 @@ import numpy as np
 from absl.testing import absltest
 
 from envpool.mujoco.myosuite.oracle import (
-    oracle_probe_cmd,
+    run_oracle_probe,
     sampled_state_from_info,
 )
 from envpool.mujoco.myosuite.oracle import (
@@ -215,12 +212,7 @@ def _oracle_trace(
     task_ids: tuple[str, ...],
     trace_plan: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
-    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as out:
-        out_path = Path(out.name)
-    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as plan:
-        plan_path = Path(plan.name)
-    plan_path.write_text(json.dumps(trace_plan, sort_keys=True))
-    cmd = oracle_probe_cmd() + [
+    args = [
         "--mode",
         "trace",
         "--render",
@@ -234,39 +226,10 @@ def _oracle_trace(
         "3",
         "--seed",
         "3",
-        "--out",
-        str(out_path),
-        "--trace_plan",
-        str(plan_path),
     ]
     for task_id in task_ids:
-        cmd.extend(["--task_id", task_id])
-    env = os.environ.copy()
-    env["ROBOHIVE_VERBOSITY"] = "SILENT"
-    try:
-        try:
-            result = subprocess.run(
-                cmd,
-                check=False,
-                capture_output=True,
-                env=env,
-                text=True,
-            )
-        except OSError as exc:
-            raise RuntimeError(
-                f"MyoSuite oracle probe failed to start\ncmd: {' '.join(cmd)}"
-            ) from exc
-        if result.returncode != 0:
-            raise RuntimeError(
-                "MyoSuite oracle probe failed\n"
-                f"cmd: {' '.join(cmd)}\n"
-                f"stdout:\n{result.stdout}\n"
-                f"stderr:\n{result.stderr}"
-            )
-        return json.loads(out_path.read_text())["tasks"]
-    finally:
-        out_path.unlink(missing_ok=True)
-        plan_path.unlink(missing_ok=True)
+        args.extend(["--task_id", task_id])
+    return run_oracle_probe(args, trace_plan=trace_plan)["tasks"]
 
 
 def _render(env: Any) -> np.ndarray:

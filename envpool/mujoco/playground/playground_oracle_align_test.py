@@ -134,6 +134,7 @@ from envpool.mujoco.playground.oracle import (
     FrameRenderer,
     find_runfile,
     make_oracle,
+    native_config,
 )
 from envpool.mujoco.render_oracle import configure_macos_mujoco_renderer
 from envpool.registration import make_gymnasium
@@ -160,112 +161,6 @@ _FILTERED_TASK_IDS = tuple(
 _ROLLOUT_STEPS = 128
 _RENDER_WIDTH = 64
 _RENDER_HEIGHT = 48
-_CONFIG = {
-    "noise_level": 0.0,
-}
-_JOYSTICK_CONFIG = {
-    **_CONFIG,
-    "command_a0": 0.0,
-    "command_a1": 0.0,
-    "command_a2": 0.0,
-    "command_b0": 0.0,
-    "command_b1": 0.0,
-    "command_b2": 0.0,
-}
-_APOLLO_CONFIG = {
-    **_CONFIG,
-    "push_enable": 0.0,
-    "command_min0": 0.0,
-    "command_min1": 0.0,
-    "command_min2": 0.0,
-    "command_max0": 0.0,
-    "command_max1": 0.0,
-    "command_max2": 0.0,
-    "command_zero_prob0": 1.0,
-    "command_zero_prob1": 1.0,
-    "command_zero_prob2": 1.0,
-}
-_BARKOUR_CONFIG = {
-    "obs_noise": -1.0,
-    "lin_vel_x_min": 0.0,
-    "lin_vel_x_max": 0.0,
-    "lin_vel_y_min": 0.0,
-    "lin_vel_y_max": 0.0,
-    "ang_vel_yaw_min": 0.0,
-    "ang_vel_yaw_max": 0.0,
-    "kick_wait_steps_min": 100000,
-    "kick_wait_steps_max": 100001,
-}
-_OP3_CONFIG = {
-    "obs_noise": -1.0,
-    "lin_vel_x_min": 0.0,
-    "lin_vel_x_max": 0.0,
-    "lin_vel_y_min": 0.0,
-    "lin_vel_y_max": 0.0,
-    "ang_vel_yaw_min": 0.0,
-    "ang_vel_yaw_max": 0.0,
-}
-_BERKELEY_CONFIG = {
-    "noise_level": 0.0,
-    "push_enable": 0.0,
-    "lin_vel_x_min": 0.0,
-    "lin_vel_x_max": 0.0,
-    "lin_vel_y_min": 0.0,
-    "lin_vel_y_max": 0.0,
-    "ang_vel_yaw_min": 0.0,
-    "ang_vel_yaw_max": 0.0,
-}
-_G1_CONFIG = {
-    "noise_level": 0.0,
-    "push_enable": 0.0,
-    "lin_vel_x_min": 0.0,
-    "lin_vel_x_max": 0.0,
-    "lin_vel_y_min": 0.0,
-    "lin_vel_y_max": 0.0,
-    "ang_vel_yaw_min": 0.0,
-    "ang_vel_yaw_max": 0.0,
-}
-_T1_CONFIG = {
-    "noise_level": 0.0,
-    "push_enable": 0.0,
-    "lin_vel_x_min": 0.0,
-    "lin_vel_x_max": 0.0,
-    "lin_vel_y_min": 0.0,
-    "lin_vel_y_max": 0.0,
-    "ang_vel_yaw_min": 0.0,
-    "ang_vel_yaw_max": 0.0,
-}
-_H1_CONFIG = {
-    "obs_noise_level": 0.0,
-    "lin_vel_x_min": 0.0,
-    "lin_vel_x_max": 0.0,
-    "lin_vel_y_min": 0.0,
-    "lin_vel_y_max": 0.0,
-    "ang_vel_yaw_min": 0.0,
-    "ang_vel_yaw_max": 0.0,
-}
-_SPOT_JOYSTICK_CONFIG = {
-    "noise_level": 0.0,
-    "pert_enable": 0.0,
-    "lin_vel_x_min": 0.0,
-    "lin_vel_x_max": 0.0,
-    "lin_vel_y_min": 0.0,
-    "lin_vel_y_max": 0.0,
-    "ang_vel_yaw_min": 0.0,
-    "ang_vel_yaw_max": 0.0,
-}
-_SPOT_GETUP_CONFIG = {
-    "noise_level": 0.0,
-}
-_SPOT_GAIT_CONFIG = {
-    "noise_level": 0.0,
-    "lin_vel_x_min": 0.0,
-    "lin_vel_x_max": 0.0,
-    "lin_vel_y_min": 0.0,
-    "lin_vel_y_max": 0.0,
-    "ang_vel_yaw_min": 0.0,
-    "ang_vel_yaw_max": 0.0,
-}
 
 
 def _bazel_shard() -> tuple[int, int]:
@@ -309,54 +204,19 @@ def _oracle_metric_name(info_key: str, task_id: str) -> str:
 
 
 def _env_config(task_id: str) -> dict[str, float]:
-    if task_id.startswith("Aloha"):
-        return {}
-    if task_id.startswith("Apollo"):
-        return _APOLLO_CONFIG
-    if task_id.startswith("Barkour"):
-        return _BARKOUR_CONFIG
-    if task_id.startswith("Op3"):
-        return _OP3_CONFIG
-    if task_id.startswith("BerkeleyHumanoid"):
-        return _BERKELEY_CONFIG
-    if task_id.startswith("G1"):
-        return _G1_CONFIG
-    if task_id.startswith("T1"):
-        return _T1_CONFIG
-    if task_id.startswith("H1"):
-        return _H1_CONFIG
-    if task_id == "SpotFlatTerrainJoystick-v1":
-        return _SPOT_JOYSTICK_CONFIG
-    if task_id == "SpotGetup-v1":
-        return _SPOT_GETUP_CONFIG
-    if task_id == "SpotJoystickGaitTracking-v1":
-        return _SPOT_GAIT_CONFIG
-    if task_id == "PandaPickCubeCartesian-v1":
-        return {"guide_sample_prob": 0.0}
-    if task_id == "PandaRobotiqPushCube-v1":
-        return {
-            "action_min_delay": 0,
-            "action_max_delay": 1,
-            "obs_min_delay": 0,
-            "obs_max_delay": 1,
-            "noise_obj_pos": 0.0,
-            "noise_obj_angle": 0.0,
-            "noise_robot_qpos": 0.0,
-            "noise_robot_qvel": 0.0,
-            "noise_eef_pos": 0.0,
-            "noise_eef_angle": 0.0,
-        }
-    if task_id in (
-        "LeapCubeRotateZAxis-v1",
-        "LeapCubeReorient-v1",
-        "AeroCubeRotateZAxis-v1",
-    ):
-        return {"noise_level": 0.0, "pert_enable": 0.0}
-    if task_id.startswith("Panda"):
-        return {}
-    if "Joystick" in task_id:
-        return _JOYSTICK_CONFIG
-    return _CONFIG
+    if task_id.startswith("Go1"):
+        config = {"noise_level": 0.0}
+        if "Joystick" in task_id:
+            config.update({
+                "command_a0": 0.0,
+                "command_a1": 0.0,
+                "command_a2": 0.0,
+                "command_b0": 0.0,
+                "command_b1": 0.0,
+                "command_b2": 0.0,
+            })
+        return config
+    return native_config(task_id)
 
 
 def _reward_info_keys(

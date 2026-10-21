@@ -15,13 +15,58 @@
 
 from __future__ import annotations
 
+import json
 import os
+import subprocess
 import sys
+import tempfile
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
+
+
+def run_oracle_probe(
+    args: list[str],
+    *,
+    sync_states: dict[str, dict[str, Any]] | None = None,
+    trace_plan: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Run the isolated official probe and clean up its JSON exchange files."""
+    with tempfile.TemporaryDirectory(prefix="envpool-myosuite-") as folder:
+        out_path = Path(folder) / "out.json"
+        cmd = oracle_probe_cmd() + args + ["--out", str(out_path)]
+        for flag, payload in (
+            ("--sync_state", sync_states),
+            ("--trace_plan", trace_plan),
+        ):
+            if payload is not None:
+                path = Path(folder) / (flag.removeprefix("--") + ".json")
+                path.write_text(json.dumps(payload, sort_keys=True))
+                cmd.extend([flag, str(path)])
+        env = os.environ.copy()
+        env["ROBOHIVE_VERBOSITY"] = "SILENT"
+        try:
+            result = subprocess.run(
+                cmd,
+                check=False,
+                capture_output=True,
+                env=env,
+                text=True,
+            )
+        except OSError as exc:
+            raise RuntimeError(
+                f"MyoSuite oracle probe failed to start\ncmd: {' '.join(cmd)}"
+            ) from exc
+        if result.returncode != 0:
+            raise RuntimeError(
+                "MyoSuite oracle probe failed\n"
+                f"cmd: {' '.join(cmd)}\n"
+                f"stdout:\n{result.stdout}\n"
+                f"stderr:\n{result.stderr}"
+            )
+        return cast(dict[str, Any], json.loads(out_path.read_text()))
 
 
 def oracle_probe_cmd() -> list[str]:

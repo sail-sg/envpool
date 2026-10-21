@@ -124,6 +124,85 @@ def _official_render_camera(task_id: str) -> str | int:
     return -1
 
 
+def native_config(task_id: str) -> dict[str, Any]:
+    """Native settings shared by oracle checks and documentation images."""
+
+    def zero_command_kwargs(
+        *,
+        noise_key: str | None = "noise_level",
+        noise_value: float = 0.0,
+        disable_key: str | None = None,
+    ) -> dict[str, Any]:
+        kwargs: dict[str, Any] = {
+            "lin_vel_x_min": 0.0,
+            "lin_vel_x_max": 0.0,
+            "lin_vel_y_min": 0.0,
+            "lin_vel_y_max": 0.0,
+            "ang_vel_yaw_min": 0.0,
+            "ang_vel_yaw_max": 0.0,
+        }
+        if noise_key is not None:
+            kwargs[noise_key] = noise_value
+        if disable_key is not None:
+            kwargs[disable_key] = 0.0
+        return kwargs
+
+    if task_id.startswith("Apollo"):
+        return {
+            "noise_level": 0.0,
+            "push_enable": 0.0,
+            "command_min0": 0.0,
+            "command_min1": 0.0,
+            "command_min2": 0.0,
+            "command_max0": 0.0,
+            "command_max1": 0.0,
+            "command_max2": 0.0,
+            "command_zero_prob0": 1.0,
+            "command_zero_prob1": 1.0,
+            "command_zero_prob2": 1.0,
+        }
+    if task_id.startswith("Barkour"):
+        return {
+            **zero_command_kwargs(noise_key="obs_noise", noise_value=-1.0),
+            "kick_wait_steps_min": 100000,
+            "kick_wait_steps_max": 100001,
+        }
+    if task_id.startswith("Op3"):
+        return zero_command_kwargs(noise_key="obs_noise", noise_value=-1.0)
+    if task_id.startswith(("BerkeleyHumanoid", "G1", "T1")):
+        return zero_command_kwargs(disable_key="push_enable")
+    if task_id.startswith("H1"):
+        return zero_command_kwargs(noise_key="obs_noise_level")
+    if task_id == "SpotFlatTerrainJoystick-v1":
+        return zero_command_kwargs(disable_key="pert_enable")
+    if task_id == "SpotGetup-v1":
+        return {"noise_level": 0.0}
+    if task_id == "SpotJoystickGaitTracking-v1":
+        return zero_command_kwargs()
+    if task_id == "PandaPickCubeCartesian-v1":
+        return {"guide_sample_prob": 0.0}
+    if task_id == "PandaRobotiqPushCube-v1":
+        return {
+            "action_min_delay": 0,
+            "action_max_delay": 1,
+            "obs_min_delay": 0,
+            "obs_max_delay": 1,
+            "noise_obj_pos": 0.0,
+            "noise_obj_angle": 0.0,
+            "noise_robot_qpos": 0.0,
+            "noise_robot_qvel": 0.0,
+            "noise_eef_pos": 0.0,
+            "noise_eef_angle": 0.0,
+        }
+    if task_id in (
+        "LeapCubeRotateZAxis-v1",
+        "LeapCubeReorient-v1",
+        "AeroCubeRotateZAxis-v1",
+    ):
+        return {"noise_level": 0.0, "pert_enable": 0.0}
+    return {}
+
+
 def make_oracle(task_id: str) -> Any:
     """Construct the pinned official task with comparison noise disabled."""
     _configure_oracle_assets()
@@ -177,41 +256,20 @@ def make_oracle(task_id: str) -> Any:
         "BerkeleyHumanoidJoystickFlatTerrain-v1",
         "BerkeleyHumanoidJoystickRoughTerrain-v1",
     ):
-        config = oracle_berkeley.default_config()
-        config.impl = "jax"
-        config.noise_config.level = 0.0
-        config.push_config.enable = False
-        config.lin_vel_x = [0.0, 0.0]
-        config.lin_vel_y = [0.0, 0.0]
-        config.ang_vel_yaw = [0.0, 0.0]
-        task = "rough_terrain" if "RoughTerrain" in task_id else "flat_terrain"
-        return oracle_berkeley.Joystick(task=task, config=config)
+        module = oracle_berkeley
+        return _make_humanoid_joystick(module, task_id)
     if task_id in (
         "G1JoystickFlatTerrain-v1",
         "G1JoystickRoughTerrain-v1",
     ):
-        config = oracle_g1.default_config()
-        config.impl = "jax"
-        config.noise_config.level = 0.0
-        config.push_config.enable = False
-        config.lin_vel_x = [0.0, 0.0]
-        config.lin_vel_y = [0.0, 0.0]
-        config.ang_vel_yaw = [0.0, 0.0]
-        task = "rough_terrain" if "RoughTerrain" in task_id else "flat_terrain"
-        return oracle_g1.Joystick(task=task, config=config)
+        module = oracle_g1
+        return _make_humanoid_joystick(module, task_id)
     if task_id in (
         "T1JoystickFlatTerrain-v1",
         "T1JoystickRoughTerrain-v1",
     ):
-        config = oracle_t1.default_config()
-        config.impl = "jax"
-        config.noise_config.level = 0.0
-        config.push_config.enable = False
-        config.lin_vel_x = [0.0, 0.0]
-        config.lin_vel_y = [0.0, 0.0]
-        config.ang_vel_yaw = [0.0, 0.0]
-        task = "rough_terrain" if "RoughTerrain" in task_id else "flat_terrain"
-        return oracle_t1.Joystick(task=task, config=config)
+        module = oracle_t1
+        return _make_humanoid_joystick(module, task_id)
     if task_id == "H1InplaceGaitTracking-v1":
         config = oracle_h1_inplace.default_config()
         config.impl = "jax"
@@ -320,6 +378,18 @@ def make_oracle(task_id: str) -> Any:
     config.command_config.b = [0.0, 0.0, 0.0]
     task = "rough_terrain" if "RoughTerrain" in task_id else "flat_terrain"
     return oracle_go1.Joystick(task=task, config=config)
+
+
+def _make_humanoid_joystick(module: Any, task_id: str) -> Any:
+    config = module.default_config()
+    config.impl = "jax"
+    config.noise_config.level = 0.0
+    config.push_config.enable = False
+    config.lin_vel_x = [0.0, 0.0]
+    config.lin_vel_y = [0.0, 0.0]
+    config.ang_vel_yaw = [0.0, 0.0]
+    task = "rough_terrain" if "RoughTerrain" in task_id else "flat_terrain"
+    return module.Joystick(task=task, config=config)
 
 
 def _configure_oracle_assets() -> None:

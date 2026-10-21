@@ -16,10 +16,7 @@
 from __future__ import annotations
 
 import importlib
-import json
 import os
-import subprocess
-import tempfile
 import unittest
 from pathlib import Path
 from typing import Any, cast
@@ -29,8 +26,8 @@ from absl import logging
 from absl.testing import absltest
 
 from envpool.mujoco.myosuite.oracle import (
-    oracle_probe_cmd,
     physics_state_from_info,
+    run_oracle_probe,
     sampled_state_from_info,
 )
 from envpool.mujoco.myosuite.oracle import (
@@ -150,60 +147,12 @@ def _run_oracle_probe(
     sync_states: dict[str, dict[str, Any]] | None = None,
     trace_plan: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as out:
-        out_path = Path(out.name)
-    input_paths: list[Path] = []
-    cmd = oracle_probe_cmd() + [
-        "--mode",
-        mode,
-        "--out",
-        str(out_path),
-        "--steps",
-        str(steps),
-        "--seed",
-        "5",
-    ]
+    args = ["--mode", mode, "--steps", str(steps), "--seed", "5"]
     for task_id in task_ids:
-        cmd.extend(["--task_id", task_id])
-    for flag, payload in (
-        ("--sync_state", sync_states),
-        ("--trace_plan", trace_plan),
-    ):
-        if payload is not None:
-            with tempfile.NamedTemporaryFile(
-                suffix=".json", delete=False
-            ) as stream:
-                path = Path(stream.name)
-            input_paths.append(path)
-            path.write_text(json.dumps(payload, sort_keys=True))
-            cmd.extend([flag, str(path)])
-    env = os.environ.copy()
-    env["ROBOHIVE_VERBOSITY"] = "SILENT"
-    try:
-        try:
-            result = subprocess.run(
-                cmd,
-                check=False,
-                capture_output=True,
-                env=env,
-                text=True,
-            )
-        except OSError as exc:
-            raise RuntimeError(
-                f"MyoSuite oracle probe failed to start\ncmd: {' '.join(cmd)}"
-            ) from exc
-        if result.returncode != 0:
-            raise RuntimeError(
-                "MyoSuite oracle probe failed\n"
-                f"cmd: {' '.join(cmd)}\n"
-                f"stdout:\n{result.stdout}\n"
-                f"stderr:\n{result.stderr}"
-            )
-        return cast(dict[str, Any], json.loads(out_path.read_text()))
-    finally:
-        out_path.unlink(missing_ok=True)
-        for path in input_paths:
-            path.unlink(missing_ok=True)
+        args.extend(["--task_id", task_id])
+    return run_oracle_probe(
+        args, sync_states=sync_states, trace_plan=trace_plan
+    )
 
 
 def _run_oracle_space_reports(
