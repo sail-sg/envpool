@@ -22,6 +22,8 @@ strategy, and scope. Prefer the simplest sound way to establish correctness.
 
 ## Hard Rules
 
+- Keep execution plans local. Do not commit plan documents or include them in
+  pull requests.
 - Do not add a Python runtime bridge for environment logic.
 - Do not import the official Python environment inside C++ implementation code.
 - If there is an upstream family with multiple registered IDs, support all of

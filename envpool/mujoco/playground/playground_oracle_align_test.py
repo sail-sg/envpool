@@ -165,12 +165,9 @@ _FILTERED_TASK_IDS = tuple(
     if not _TASK_FILTER or task_id in _TASK_FILTER
 )
 # The public Playground task is authored against MJX, but EnvPool's runtime is
-# native MuJoCo C++. For the official Go1 XML, MJX and MuJoCo C do not match
-# bitwise through the one-iteration frictionloss solver path; the diagnostic
-# test below pins that gap and shows it disappears when frictionloss is disabled
-# or when solver iterations are raised. The alignment oracle therefore uses the
-# pinned upstream XML/assets and official obs/reward formulas while stepping the
-# same MuJoCo C backend that EnvPool embeds.
+# native MuJoCo C++. Use the pinned upstream XML/assets and official task step
+# with an independent MuJoCo C integrator. MJX's one-iteration frictionloss
+# solver differs even without contacts; matching it is not the runtime contract.
 _ROLLOUT_STEPS = 128
 _RENDER_WIDTH = 64
 _RENDER_HEIGHT = 48
@@ -280,283 +277,6 @@ _SPOT_GAIT_CONFIG = {
     "ang_vel_yaw_min": 0.0,
     "ang_vel_yaw_max": 0.0,
 }
-_APOLLO_REWARD_INFO_KEYS = (
-    "reward_termination",
-    "reward_alive",
-    "reward_tracking",
-    "reward_lin_vel_z",
-    "reward_ang_vel_xy",
-    "reward_orientation",
-    "reward_feet_phase",
-    "reward_torques",
-    "reward_action_rate",
-    "reward_energy",
-    "reward_collision",
-    "reward_pose",
-)
-_BARKOUR_REWARD_INFO_KEYS = (
-    "reward_tracking_lin_vel",
-    "reward_tracking_ang_vel",
-    "reward_lin_vel_z",
-    "reward_ang_vel_xy",
-    "reward_orientation",
-    "reward_torques",
-    "reward_action_rate",
-    "reward_stand_still",
-    "reward_termination",
-    "reward_feet_air_time",
-)
-_OP3_REWARD_INFO_KEYS = (
-    "reward_tracking_lin_vel",
-    "reward_tracking_ang_vel",
-    "reward_lin_vel_z",
-    "reward_ang_vel_xy",
-    "reward_orientation",
-    "reward_torques",
-    "reward_action_rate",
-    "reward_zero_cmd",
-    "reward_termination",
-    "reward_feet_slip",
-    "reward_feet_clearance",
-    "reward_energy",
-)
-_BERKELEY_REWARD_INFO_KEYS = (
-    "reward_tracking_lin_vel",
-    "reward_tracking_ang_vel",
-    "reward_lin_vel_z",
-    "reward_ang_vel_xy",
-    "reward_orientation",
-    "reward_base_height",
-    "reward_torques",
-    "reward_action_rate",
-    "reward_energy",
-    "reward_feet_clearance",
-    "reward_feet_air_time",
-    "reward_feet_slip",
-    "reward_feet_height",
-    "reward_feet_phase",
-    "reward_stand_still",
-    "reward_alive",
-    "reward_termination",
-    "reward_joint_deviation_knee",
-    "reward_joint_deviation_hip",
-    "reward_dof_pos_limits",
-    "reward_pose",
-)
-_G1_REWARD_INFO_KEYS = (
-    "reward_tracking_lin_vel",
-    "reward_tracking_ang_vel",
-    "reward_lin_vel_z",
-    "reward_ang_vel_xy",
-    "reward_orientation",
-    "reward_base_height",
-    "reward_torques",
-    "reward_action_rate",
-    "reward_energy",
-    "reward_dof_acc",
-    "reward_feet_clearance",
-    "reward_feet_air_time",
-    "reward_feet_slip",
-    "reward_feet_height",
-    "reward_feet_phase",
-    "reward_stand_still",
-    "reward_alive",
-    "reward_termination",
-    "reward_collision",
-    "reward_contact_force",
-    "reward_joint_deviation_knee",
-    "reward_joint_deviation_hip",
-    "reward_dof_pos_limits",
-    "reward_pose",
-)
-_T1_REWARD_INFO_KEYS = (
-    "reward_tracking_lin_vel",
-    "reward_tracking_ang_vel",
-    "reward_lin_vel_z",
-    "reward_ang_vel_xy",
-    "reward_orientation",
-    "reward_base_height",
-    "reward_torques",
-    "reward_action_rate",
-    "reward_energy",
-    "reward_dof_acc",
-    "reward_dof_vel",
-    "reward_feet_clearance",
-    "reward_feet_air_time",
-    "reward_feet_slip",
-    "reward_feet_height",
-    "reward_feet_phase",
-    "reward_stand_still",
-    "reward_alive",
-    "reward_termination",
-    "reward_collision",
-    "reward_joint_deviation_knee",
-    "reward_joint_deviation_hip",
-    "reward_dof_pos_limits",
-    "reward_pose",
-    "reward_feet_distance",
-)
-_H1_INPLACE_REWARD_INFO_KEYS = (
-    "reward_feet_phase",
-    "reward_pose",
-    "reward_ang_vel",
-    "reward_lin_vel",
-)
-_H1_JOYSTICK_REWARD_INFO_KEYS = (
-    "reward_feet_phase",
-    "reward_tracking_lin_vel",
-    "reward_tracking_ang_vel",
-    "reward_feet_air_time",
-    "reward_ang_vel_xy",
-    "reward_lin_vel_z",
-    "reward_pose",
-    "reward_foot_slip",
-    "reward_action_rate",
-)
-_SPOT_JOYSTICK_REWARD_INFO_KEYS = (
-    "reward_tracking_lin_vel",
-    "reward_tracking_ang_vel",
-    "reward_lin_vel_z",
-    "reward_ang_vel_xy",
-    "reward_orientation",
-    "reward_termination",
-    "reward_posture",
-    "reward_torques",
-    "reward_action_rate",
-    "reward_energy",
-    "reward_feet_slip",
-    "reward_feet_clearance",
-    "reward_feet_height",
-    "reward_feet_air_time",
-)
-_SPOT_GETUP_REWARD_INFO_KEYS = (
-    "reward_orientation",
-    "reward_torso_height",
-    "reward_posture",
-    "reward_stand_still",
-    "reward_action_rate",
-    "reward_torques",
-)
-_SPOT_GAIT_REWARD_INFO_KEYS = (
-    "reward_tracking_lin_vel",
-    "reward_tracking_ang_vel",
-    "reward_feet_phase",
-    "reward_ang_vel_xy",
-    "reward_lin_vel_z",
-    "reward_hip_splay",
-)
-_PANDA_PICK_REWARD_INFO_KEYS = (
-    "reward_gripper_box",
-    "reward_box_target",
-    "reward_no_floor_collision",
-    "reward_robot_target_qpos",
-)
-_PANDA_CARTESIAN_REWARD_INFO_KEYS = (
-    "reward_gripper_box",
-    "reward_box_target",
-    "reward_no_floor_collision",
-    "reward_no_box_collision",
-    "reward_robot_target_qpos",
-    "reward_lifted",
-    "reward_success",
-)
-_PANDA_OPEN_CABINET_REWARD_INFO_KEYS = (
-    "reward_gripper_box",
-    "reward_box_target",
-    "reward_no_barrier_collision",
-    "reward_robot_target_qpos",
-)
-_PANDA_ROBOTIQ_REWARD_INFO_KEYS = (
-    "reward_gripper_box",
-    "reward_box_target",
-    "reward_box_orientation",
-    "reward_gripper_collision_side",
-    "reward_robot_target_qpos",
-    "reward_joint_vel",
-    "reward_joint_vel_limit",
-    "reward_total_command",
-    "reward_action_rate",
-)
-_HAND_ROTATE_REWARD_INFO_KEYS = (
-    "reward_angvel",
-    "reward_linvel",
-    "reward_pose",
-    "reward_torques",
-    "reward_energy",
-    "reward_termination",
-    "reward_action_rate",
-)
-_LEAP_REORIENT_REWARD_INFO_KEYS = (
-    "reward_orientation",
-    "reward_position",
-    "reward_termination",
-    "reward_hand_pose",
-    "reward_action_rate",
-    "reward_joint_vel",
-    "reward_energy",
-    "reward_success",
-)
-_ALOHA_HANDOVER_REWARD_INFO_KEYS = (
-    "reward_gripper_box",
-    "reward_box_handover",
-    "reward_handover_target",
-    "reward_no_table_collision",
-)
-_ALOHA_PEG_REWARD_INFO_KEYS = (
-    "reward_left_reward",
-    "reward_right_reward",
-    "reward_left_target_qpos",
-    "reward_right_target_qpos",
-    "reward_no_table_collision",
-    "reward_socket_z_up",
-    "reward_peg_z_up",
-    "reward_socket_entrance_reward",
-    "reward_peg_end2_reward",
-    "reward_peg_insertion_reward",
-)
-_REWARD_INFO_KEYS = (
-    "reward_tracking_lin_vel",
-    "reward_tracking_ang_vel",
-    "reward_lin_vel_z",
-    "reward_ang_vel_xy",
-    "reward_orientation",
-    "reward_dof_pos_limits",
-    "reward_pose",
-    "reward_termination",
-    "reward_stand_still",
-    "reward_torques",
-    "reward_action_rate",
-    "reward_energy",
-    "reward_feet_clearance",
-    "reward_feet_height",
-    "reward_feet_slip",
-    "reward_feet_air_time",
-)
-_GETUP_REWARD_INFO_KEYS = (
-    "reward_orientation",
-    "reward_torso_height",
-    "reward_posture",
-    "reward_stand_still",
-    "reward_action_rate",
-    "reward_dof_pos_limits",
-    "reward_torques",
-    "reward_dof_acc",
-    "reward_dof_vel",
-)
-_HANDSTAND_REWARD_INFO_KEYS = (
-    "reward_height",
-    "reward_orientation",
-    "reward_contact",
-    "reward_action_rate",
-    "reward_termination",
-    "reward_dof_pos_limits",
-    "reward_torques",
-    "reward_pose",
-    "reward_stay_still",
-    "reward_energy",
-    "reward_dof_acc",
-)
-_STRICT_MJX_DIAGNOSTIC_ATOL = 1e-10
 
 
 def _bazel_shard() -> tuple[int, int]:
@@ -914,50 +634,18 @@ def _env_config(task_id: str) -> dict[str, float]:
     return _CONFIG
 
 
-def _reward_info_keys(task_id: str) -> tuple[str, ...]:
-    if task_id == "AlohaHandOver-v1":
-        return _ALOHA_HANDOVER_REWARD_INFO_KEYS
-    if task_id == "AlohaSinglePegInsertion-v1":
-        return _ALOHA_PEG_REWARD_INFO_KEYS
-    if task_id.startswith("Apollo"):
-        return _APOLLO_REWARD_INFO_KEYS
-    if task_id.startswith("Barkour"):
-        return _BARKOUR_REWARD_INFO_KEYS
-    if task_id.startswith("Op3"):
-        return _OP3_REWARD_INFO_KEYS
-    if task_id.startswith("BerkeleyHumanoid"):
-        return _BERKELEY_REWARD_INFO_KEYS
-    if task_id.startswith("G1"):
-        return _G1_REWARD_INFO_KEYS
-    if task_id.startswith("T1"):
-        return _T1_REWARD_INFO_KEYS
-    if task_id == "H1InplaceGaitTracking-v1":
-        return _H1_INPLACE_REWARD_INFO_KEYS
-    if task_id == "H1JoystickGaitTracking-v1":
-        return _H1_JOYSTICK_REWARD_INFO_KEYS
-    if task_id == "SpotFlatTerrainJoystick-v1":
-        return _SPOT_JOYSTICK_REWARD_INFO_KEYS
-    if task_id == "SpotGetup-v1":
-        return _SPOT_GETUP_REWARD_INFO_KEYS
-    if task_id == "SpotJoystickGaitTracking-v1":
-        return _SPOT_GAIT_REWARD_INFO_KEYS
-    if task_id in ("PandaPickCube-v1", "PandaPickCubeOrientation-v1"):
-        return _PANDA_PICK_REWARD_INFO_KEYS
-    if task_id == "PandaPickCubeCartesian-v1":
-        return _PANDA_CARTESIAN_REWARD_INFO_KEYS
-    if task_id == "PandaOpenCabinet-v1":
-        return _PANDA_OPEN_CABINET_REWARD_INFO_KEYS
-    if task_id == "PandaRobotiqPushCube-v1":
-        return _PANDA_ROBOTIQ_REWARD_INFO_KEYS
-    if task_id in ("LeapCubeRotateZAxis-v1", "AeroCubeRotateZAxis-v1"):
-        return _HAND_ROTATE_REWARD_INFO_KEYS
-    if task_id == "LeapCubeReorient-v1":
-        return _LEAP_REORIENT_REWARD_INFO_KEYS
-    if "Joystick" in task_id:
-        return _REWARD_INFO_KEYS
-    if "Getup" in task_id:
-        return _GETUP_REWARD_INFO_KEYS
-    return _HANDSTAND_REWARD_INFO_KEYS
+def _reward_info_keys(
+    oracle: Any, state: oracle_mjx_env.State
+) -> tuple[str, ...]:
+    config = oracle._config.reward_config
+    names = set(config.scales if "scales" in config else config.reward_scales)
+    # Success/lift bonuses are reported separately from scaled components.
+    names.update(
+        key.removeprefix("reward/")
+        for key in state.metrics
+        if key.startswith("reward/")
+    )
+    return tuple(f"reward_{key}" for key in sorted(names))
 
 
 def _sync_oracle_state(
@@ -1101,18 +789,13 @@ def _sync_oracle_state(
             oracle_info[key] = jnp.asarray(info[key][0, : oracle.action_size])
     if isinstance(oracle, (oracle_barkour.Joystick, oracle_op3.Joystick)):
         obs = jnp.asarray(info["obs_history"][0])
-    elif isinstance(oracle, oracle_berkeley.Joystick):
-        contact = _berkeley_contact(oracle, data)
-        obs = oracle._get_obs(  # pylint: disable=protected-access
-            data, oracle_info, contact
-        )
-    elif isinstance(oracle, oracle_g1.Joystick):
-        contact = _g1_contact(oracle, data)
+    elif isinstance(oracle, (oracle_berkeley.Joystick, oracle_g1.Joystick)):
+        contact = _feet_contact(oracle, data)
         obs = oracle._get_obs(  # pylint: disable=protected-access
             data, oracle_info, contact
         )
     elif isinstance(oracle, oracle_t1.Joystick):
-        contact = _t1_contact(oracle, data)
+        contact = _paired_feet_contact(oracle, data)
         obs = oracle._get_obs(  # pylint: disable=protected-access
             data, oracle_info, contact
         )
@@ -1123,20 +806,18 @@ def _sync_oracle_state(
             oracle_h1_joystick.JoystickGaitTracking,
         ),
     ):
-        contact = _h1_contact_by_adr(oracle, data)
+        contact = _paired_feet_contact(oracle, data)
         obs = oracle._get_obs(  # pylint: disable=protected-access
             data, oracle_info, jax.random.PRNGKey(0), contact
         )
-    elif isinstance(oracle, oracle_spot_joystick.Joystick):
-        obs = oracle._get_obs(  # pylint: disable=protected-access
-            data, oracle_info, jax.random.PRNGKey(0)
-        )
-    elif isinstance(oracle, oracle_spot_getup.Getup):
+    elif isinstance(
+        oracle, (oracle_spot_joystick.Joystick, oracle_spot_getup.Getup)
+    ):
         obs = oracle._get_obs(  # pylint: disable=protected-access
             data, oracle_info, jax.random.PRNGKey(0)
         )
     elif isinstance(oracle, oracle_spot_gait.JoystickGaitTracking):
-        contact = _spot_contact(oracle, data)
+        contact = _feet_contact(oracle, data)
         obs = oracle._get_obs(  # pylint: disable=protected-access
             data, oracle_info, jax.random.PRNGKey(0), contact
         )
@@ -1202,16 +883,8 @@ def _sync_oracle_state(
 def _make_mujoco_data_from_info(
     oracle: Any, info: dict[str, Any]
 ) -> mujoco.MjData:
-    return _make_mujoco_data_from_model(
-        oracle.mj_model,
-        info,
-        copy_derived=not isinstance(oracle, oracle_go1.Joystick),
-    )
-
-
-def _make_mujoco_data_from_model(
-    model: mujoco.MjModel, info: dict[str, Any], *, copy_derived: bool = True
-) -> mujoco.MjData:
+    model = oracle.mj_model
+    copy_derived = not isinstance(oracle, oracle_go1.Joystick)
     data = mujoco.MjData(model)
     data.qpos[:] = info["qpos"][0, : model.nq]
     data.qvel[:] = info["qvel"][0, : model.nv]
@@ -1293,42 +966,14 @@ def _handstand_unwanted_contact(
     ])
 
 
-def _berkeley_contact(
-    oracle: oracle_berkeley.Joystick, data: mjx.Data
-) -> jax.Array:
+def _feet_contact(oracle: Any, data: mjx.Data) -> jax.Array:
     return jnp.array([
         data.sensordata[oracle._mj_model.sensor_adr[sensor_id]] > 0
         for sensor_id in oracle._feet_floor_found_sensor
     ])
 
 
-def _g1_contact(oracle: oracle_g1.Joystick, data: mjx.Data) -> jax.Array:
-    return jnp.array([
-        data.sensordata[oracle._mj_model.sensor_adr[sensor_id]] > 0
-        for sensor_id in oracle._feet_floor_found_sensor
-    ])
-
-
-def _t1_contact(oracle: oracle_t1.Joystick, data: mjx.Data) -> jax.Array:
-    left = jnp.array([
-        data.sensordata[oracle._mj_model.sensor_adr[sensor_id]] > 0
-        for sensor_id in oracle._left_foot_floor_found_sensor
-    ])
-    right = jnp.array([
-        data.sensordata[oracle._mj_model.sensor_adr[sensor_id]] > 0
-        for sensor_id in oracle._right_foot_floor_found_sensor
-    ])
-    return jnp.hstack([jnp.any(left), jnp.any(right)])
-
-
-def _spot_contact(oracle: Any, data: mjx.Data) -> jax.Array:
-    return jnp.array([
-        data.sensordata[oracle._mj_model.sensor_adr[sensor_id]] > 0
-        for sensor_id in oracle._feet_floor_found_sensor
-    ])
-
-
-def _h1_contact_by_adr(oracle: Any, data: mjx.Data) -> jax.Array:
+def _paired_feet_contact(oracle: Any, data: mjx.Data) -> jax.Array:
     left = jnp.array([
         data.sensordata[oracle._mj_model.sensor_adr[sensor_id]] > 0
         for sensor_id in oracle._left_foot_floor_found_sensor
@@ -1454,86 +1099,6 @@ def _oracle_physics(task_id: str) -> Iterator[Any]:
         ),
     ):
         yield oracle
-
-
-def _make_rough_oracle_for_mjx_diagnostic(
-    *,
-    iterations: int = 1,
-    disable_frictionloss: bool = False,
-) -> oracle_go1.Joystick:
-    oracle = _make_oracle("Go1JoystickRoughTerrain-v1")
-    oracle.mj_model.opt.iterations = iterations
-    if disable_frictionloss:
-        oracle.mj_model.opt.disableflags |= int(
-            mujoco.mjtDisableBit.mjDSBL_FRICTIONLOSS
-        )
-    # The upstream env builds the MJX model during construction. Rebuild it
-    # after the diagnostic mutates MuJoCo options so both backends see exactly
-    # the same model.
-    oracle._mjx_model = mjx.put_model(  # pylint: disable=protected-access
-        oracle.mj_model,
-        impl=oracle.mjx_model.impl.value,
-    )
-    return oracle
-
-
-def _compare_mujoco_c_and_mjx_one_control_step(
-    oracle: oracle_go1.Joystick,
-    *,
-    raise_z: float = 1.0,
-) -> dict[str, Any]:
-    state = oracle.reset(jax.random.PRNGKey(0))
-    qpos = np.asarray(state.data.qpos).copy()
-    qvel = np.asarray(state.data.qvel).copy()
-    ctrl = np.asarray(state.data.ctrl).copy()
-    qpos[2] += raise_z
-
-    mujoco_data = mujoco.MjData(oracle.mj_model)
-    mujoco_data.qpos[:] = qpos
-    mujoco_data.qvel[:] = qvel
-    mujoco_data.ctrl[:] = ctrl
-    mujoco.mj_forward(oracle.mj_model, mujoco_data)
-
-    mjx_data = state.data.replace(
-        qpos=jnp.asarray(qpos),
-        qvel=jnp.asarray(qvel),
-        ctrl=jnp.asarray(ctrl),
-    )
-    mjx_data = mjx.forward(oracle.mjx_model, mjx_data)
-    initial_mujoco_ncon = int(mujoco_data.ncon)
-    initial_mjx_ncon = int(np.asarray(mjx_data._impl.ncon))
-
-    action = np.linspace(-0.6, 0.6, oracle.action_size, dtype=np.float64)
-    motor_targets = (
-        np.asarray(oracle._default_pose)  # pylint: disable=protected-access
-        + action * oracle._config.action_scale  # pylint: disable=protected-access
-    )
-    mujoco_data.ctrl[:] = motor_targets
-    mjx_data = mjx_data.replace(ctrl=jnp.asarray(motor_targets))
-    for _ in range(oracle.n_substeps):
-        mujoco.mj_step(oracle.mj_model, mujoco_data)
-        mjx_data = mjx.step(oracle.mjx_model, mjx_data)
-
-    return {
-        "initial_mujoco_ncon": initial_mujoco_ncon,
-        "initial_mjx_ncon": initial_mjx_ncon,
-        "final_mujoco_ncon": int(mujoco_data.ncon),
-        "final_mjx_ncon": int(np.asarray(mjx_data._impl.ncon)),
-        "qpos": float(
-            np.max(np.abs(np.asarray(mjx_data.qpos) - mujoco_data.qpos))
-        ),
-        "qvel": float(
-            np.max(np.abs(np.asarray(mjx_data.qvel) - mujoco_data.qvel))
-        ),
-        "qacc": float(
-            np.max(np.abs(np.asarray(mjx_data.qacc) - mujoco_data.qacc))
-        ),
-        "sensordata": float(
-            np.max(
-                np.abs(np.asarray(mjx_data.sensordata) - mujoco_data.sensordata)
-            )
-        ),
-    }
 
 
 def _rollout_atol(task_id: str) -> float:
@@ -1685,7 +1250,7 @@ def _assert_rollout_outputs_close(
             float(np.asarray(info[key][0])),
             float(np.asarray(state.metrics[_oracle_metric_name(key, task_id)])),
         )
-        for key in _reward_info_keys(task_id)
+        for key in _reward_info_keys(oracle, state)
     }
     np.testing.assert_allclose(
         reward[0],
@@ -1709,10 +1274,10 @@ def _assert_rollout_outputs_close(
             int(np.asarray(state.info["steps_until_next_cmd"])),
         )
     test.assertEqual(bool(info["terminated"][0]), bool(np.asarray(state.done)))
-    for key in _reward_info_keys(task_id):
+    for key, (actual, expected) in reward_report.items():
         np.testing.assert_allclose(
-            info[key][0],
-            np.asarray(state.metrics[_oracle_metric_name(key, task_id)]),
+            actual,
+            expected,
             atol=_rollout_atol(task_id),
             rtol=_rollout_atol(task_id),
             err_msg=f"info[{key}]",
@@ -1744,39 +1309,6 @@ class PlaygroundOracleAlignTest(absltest.TestCase):
                 "WalkerWalk",
             }
         )
-
-    def test_mjx_frictionloss_gap_is_not_envpool_drift(self) -> None:
-        """Documents why MuJoCo C, not MJX, is the step-level oracle here."""
-        if not _is_primary_shard():
-            return
-        official = _compare_mujoco_c_and_mjx_one_control_step(
-            _make_rough_oracle_for_mjx_diagnostic()
-        )
-        self.assertEqual(official["initial_mujoco_ncon"], 0)
-        self.assertEqual(official["final_mujoco_ncon"], 0)
-        self.assertGreater(official["initial_mjx_ncon"], 0)
-        self.assertGreater(official["sensordata"], 1e-4)
-        self.assertGreater(official["qacc"], 1e-2)
-
-        no_frictionloss = _compare_mujoco_c_and_mjx_one_control_step(
-            _make_rough_oracle_for_mjx_diagnostic(disable_frictionloss=True)
-        )
-        high_iterations = _compare_mujoco_c_and_mjx_one_control_step(
-            _make_rough_oracle_for_mjx_diagnostic(iterations=5)
-        )
-        for label, report in (
-            ("frictionloss disabled", no_frictionloss),
-            ("iterations=5", high_iterations),
-        ):
-            with self.subTest(label=label):
-                self.assertEqual(report["initial_mujoco_ncon"], 0)
-                self.assertEqual(report["final_mujoco_ncon"], 0)
-                for key in ("qpos", "qvel", "qacc", "sensordata"):
-                    self.assertLessEqual(
-                        report[key],
-                        _STRICT_MJX_DIAGNOSTIC_ATOL,
-                        msg=f"{label} {key}: {report}",
-                    )
 
     def test_rollout_and_render_align_with_oracle(self) -> None:
         """Checks independent dynamics and rendering over nontrivial rollouts."""
