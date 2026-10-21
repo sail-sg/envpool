@@ -357,7 +357,10 @@ def _make_mujoco_playground_family() -> RenderFamily:
         make_oracle,
         native_config,
     )
+    from envpool.mujoco.render_oracle import configure_macos_mujoco_renderer
     from envpool.registration import make_gymnasium
+
+    configure_macos_mujoco_renderer()
 
     def make_render_data(model: Any, info: dict[str, Any]) -> Any:
         data = mujoco.MjData(model)
