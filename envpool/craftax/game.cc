@@ -100,8 +100,8 @@ Pos Game::TowardPlayer(Pos pos) {
   const int y = std::abs(delta.y);
   const int x = std::abs(delta.x);
   return y > x || (y == x && rng_.Integer(2) == 0)
-             ? Pos{(delta.y > 0) - (delta.y < 0), 0}
-             : Pos{0, (delta.x > 0) - (delta.x < 0)};
+             ? Pos{std::clamp(delta.y, -1, 1), 0}
+             : Pos{0, std::clamp(delta.x, -1, 1)};
 }
 
 void Game::Reset() {

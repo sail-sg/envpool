@@ -161,7 +161,6 @@ static void Dungeon(Game* game, envpool::Random& rng,
   const int w = game->params.width;
   const int ph = h + 20;
   const int pw = w + 20;
-  const int chunks = h / 16;
   s.player_level = level;
   std::vector<int> blocks(ph * pw);
   std::vector<int> items(ph * pw);
@@ -173,13 +172,15 @@ static void Dungeon(Game* game, envpool::Random& rng,
   for (auto& size : sizes) {
     size = {5 + rng.Integer(5), 5 + rng.Integer(5)};
   }
-  std::vector<int> room_chunks(chunks * chunks);
-  std::iota(room_chunks.begin(), room_chunks.end(), 0);
-  rng.Shuffle(&room_chunks);
+  std::vector<Pos> room_origins;
+  for (int x = 0; x < w; x += 16) {
+    for (int y = 0; y < h; y += 16) {
+      room_origins.push_back({y + 10, x + 10});
+    }
+  }
+  rng.Shuffle(&room_origins);
   for (int room = 0; room < 8; ++room) {
-    const int chunk = room_chunks[room];
-    const Pos pos{(chunk % chunks) * 16 + 10 + rng.Integer(11),
-                  (chunk / chunks) * 16 + 10 + rng.Integer(11)};
+    const Pos pos = room_origins[room] + Pos{rng.Integer(11), rng.Integer(11)};
     positions[room] = pos;
     for (int y = 0; y < sizes[room].y; ++y) {
       for (int x = 0; x < sizes[room].x; ++x) {
