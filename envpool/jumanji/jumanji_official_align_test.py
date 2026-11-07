@@ -376,6 +376,22 @@ def _mmst_step(env: Any) -> Any:
     return step
 
 
+def _cvrp_reset_values(
+    official: Any, obs: dict
+) -> tuple[np.ndarray, np.ndarray]:
+    coordinates = obs["coordinates"]
+    # A native float32 draw at the upper edge can round up to 1.
+    assert np.all((coordinates >= 0) & (coordinates <= 1))
+    demand_units = obs["demands"] * official.max_capacity
+    demands = np.rint(demand_units).astype(np.int32)
+    np.testing.assert_allclose(demand_units, demands, rtol=0, atol=1e-6)
+    np.testing.assert_array_equal(demands[..., 0], 0)
+    assert np.all(
+        (demands[..., 1:] >= 1) & (demands[..., 1:] < official.max_demand)
+    )
+    return coordinates, demands
+
+
 def _native_reset_reference(
     task_id: str,
     official: Any,
@@ -386,15 +402,10 @@ def _native_reset_reference(
 ) -> tuple[Any, Any]:
     """Use actual native reset state when RNG streams need not agree."""
     if task_id == "CVRP-v1":
-        coordinates = obs["coordinates"][0]
-        assert np.all((coordinates >= 0) & (coordinates < 1))
-        demand_units = obs["demands"][0] * official.max_capacity
-        demands = np.rint(demand_units).astype(np.int32)
-        np.testing.assert_allclose(demand_units, demands, rtol=0, atol=1e-6)
-        assert demands[0] == 0
-        assert np.all((demands[1:] >= 1) & (demands[1:] < official.max_demand))
+        coordinates, demands = _cvrp_reset_values(official, obs)
         state = state.replace(
-            coordinates=jnp.asarray(coordinates), demands=jnp.asarray(demands)
+            coordinates=jnp.asarray(coordinates[0]),
+            demands=jnp.asarray(demands[0]),
         )
         return state, timestep.replace(
             observation=official._state_to_observation(state)
@@ -908,25 +919,44 @@ def _assert_render_content(
 class JumanjiOfficialAlignTest(parameterized.TestCase):
     """Official oracle alignment for every registered Jumanji task."""
 
-    @parameterized.parameters("Game2048-v1", "Snake-v1", "Tetris-v0")
+    @parameterized.parameters("CVRP-v1", "Game2048-v1", "Snake-v1", "Tetris-v0")
     def test_native_sample_distributions(self, task_id: str) -> None:
         """Check sampled semantic state without synchronizing a native reset."""
         env = make_gymnasium(task_id, num_envs=64, num_threads=2, seed=31)
         official = _make_official_env(task_id)
-        samples = []
         try:
-            key = {
-                "Game2048-v1": "board",
-                "Snake-v1": "grid",
-                "Tetris-v0": "tetromino",
+            keys = {
+                "CVRP-v1": ("coordinates", "demands"),
+                "Game2048-v1": ("board",),
+                "Snake-v1": ("grid",),
+                "Tetris-v0": ("tetromino",),
             }[task_id]
+            samples: dict[str, list[np.ndarray]] = {key: [] for key in keys}
             for _ in range(64):
                 obs, _ = env.reset()
-                samples.append(obs[key].copy())
-            values = np.concatenate(samples)
+                for key in keys:
+                    samples[key].append(obs[key].copy())
+            values = {key: np.concatenate(samples[key]) for key in keys}
             groups = []
-            if task_id == "Game2048-v1":
-                boards = values.reshape(-1, 16)
+            if task_id == "CVRP-v1":
+                coordinates, demands = _cvrp_reset_values(official, values)
+                bins = np.minimum((4 * coordinates).astype(np.int32), 3)
+                cells = 4 * bins[..., 0] + bins[..., 1]
+                customer_cells = cells[:, 1:].ravel()
+                customer_demands = demands[:, 1:].ravel() - 1
+                demand_count = official.max_demand - 1
+                # The upstream generator draws locations and demands independently.
+                joint = customer_cells * demand_count + customer_demands
+                joint_count = 16 * demand_count
+                cell_probabilities = np.full(16, 1 / 16)
+                groups = [
+                    (cells[:, 0], cell_probabilities),
+                    (customer_cells, cell_probabilities),
+                    (customer_demands, np.full(demand_count, 1 / demand_count)),
+                    (joint, np.full(joint_count, 1 / joint_count)),
+                ]
+            elif task_id == "Game2048-v1":
+                boards = values["board"].reshape(-1, 16)
                 self.assertTrue(np.all(np.count_nonzero(boards, axis=1) == 1))
                 self.assertTrue(np.all(np.isin(boards, (0, 1, 2))))
                 groups = [
@@ -935,7 +965,7 @@ class JumanjiOfficialAlignTest(parameterized.TestCase):
                 ]
             elif task_id == "Snake-v1":
                 for channel in (1, 3):
-                    positions = values[..., channel].reshape(-1, 144)
+                    positions = values["grid"][..., channel].reshape(-1, 144)
                     self.assertTrue(np.all(positions.sum(axis=1) == 1))
                     groups.append((
                         positions.argmax(axis=1),
@@ -944,7 +974,9 @@ class JumanjiOfficialAlignTest(parameterized.TestCase):
                 self.assertTrue(np.all(groups[0][0] != groups[1][0]))
             else:
                 templates = np.asarray(official.TETROMINOES_LIST[:, 0])
-                matches = np.all(values[:, None] == templates, axis=(2, 3))
+                matches = np.all(
+                    values["tetromino"][:, None] == templates, axis=(2, 3)
+                )
                 self.assertTrue(np.all(matches.sum(axis=1) == 1))
                 groups = [(matches.argmax(axis=1), np.full(7, 1 / 7))]
             for labels, expected in groups:
