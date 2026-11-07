@@ -662,6 +662,7 @@ py_library(
     imports = ["../.."],
     deps = [
         ":mujoco_oracle",
+        "//envpool/python:runfile_path",
         "@mujoco_playground_source//:python",
         requirement("etils"),
         requirement("mujoco"),
@@ -686,6 +687,7 @@ py_test(
         ":playground_oracle",
         ":playground_registration",
         "//envpool/python:glfw_context",
+        "//envpool/python:runfile_path",
         "@mujoco_playground_source//:python",
         requirement("absl-py"),
         requirement("jax"),

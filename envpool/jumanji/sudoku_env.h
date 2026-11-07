@@ -119,8 +119,9 @@ inline Dataset LoadNpyDataset(const std::string& path) {
 
 inline std::shared_ptr<const Dataset> GetDataset(const std::string& base_path,
                                                  const std::string& database) {
-  return std::make_shared<Dataset>(LoadNpyDataset(
-      base_path + "/jumanji/assets/sudoku/" + DatabaseFile(database)));
+  return npy::LoadSharedDataset(
+      base_path + "/jumanji/assets/sudoku/" + DatabaseFile(database),
+      LoadNpyDataset);
 }
 
 inline bool IsPlacementValid(const Board& board, int row, int col, int value) {

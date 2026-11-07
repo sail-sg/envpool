@@ -154,8 +154,9 @@ inline Dataset LoadNpyDataset(const std::string& path) {
 }
 
 inline std::shared_ptr<const Dataset> GetDataset(const std::string& base_path) {
-  return std::make_shared<Dataset>(LoadNpyDataset(
-      base_path + "/jumanji/assets/boxoban/unfiltered-test.npy"));
+  return npy::LoadSharedDataset(
+      base_path + "/jumanji/assets/boxoban/unfiltered-test.npy",
+      LoadNpyDataset);
 }
 
 inline int CountTargets(const Level& level) {

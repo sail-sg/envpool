@@ -85,10 +85,8 @@ std::array<Vec2, 4> Corners(const CollisionBox& box) {
                                      Vec2{box.length / 2.0, -box.width / 2.0}};
   std::array<Vec2, 4> corners{};
   for (std::size_t i = 0; i < local.size(); ++i) {
-    // Rotate the local corner before translating, matching rotation @ points.
-    corners[i] =
-        box.center + Vec2{std::fma(-sin_h, local[i].y, cos_h * local[i].x),
-                          std::fma(cos_h, local[i].y, sin_h * local[i].x)};
+    corners[i] = box.center + Vec2{cos_h * local[i].x - sin_h * local[i].y,
+                                   sin_h * local[i].x + cos_h * local[i].y};
   }
   return corners;
 }

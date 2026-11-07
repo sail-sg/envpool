@@ -18,6 +18,13 @@ load("//envpool:requirements.bzl", "requirement")
 package(default_visibility = ["//visibility:public"])
 
 py_library(
+    name = "runfile_path",
+    testonly = True,
+    srcs = ["runfile_path.py"],
+    deps = ["@rules_python//python/runfiles"],
+)
+
+py_library(
     name = "seed_test_utils",
     srcs = ["seed_test_utils.py"],
     imports = ["../.."],

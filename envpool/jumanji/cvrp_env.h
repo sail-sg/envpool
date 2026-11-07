@@ -67,7 +67,7 @@ inline float Distance(const std::array<float, kNumNodes * 2>& coordinates,
 class CVRPEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("cvrp_max_capacity"_.Bind(20),
+    return MakeDict("cvrp_max_capacity"_.Bind(30),
                     "cvrp_coordinates"_.Bind(std::string("")),
                     "cvrp_demands"_.Bind(std::string("")),
                     "cvrp_distance_matrix"_.Bind(std::string("")));
@@ -223,7 +223,9 @@ class CVRPEnv : public Env<CVRPEnvSpec>, public RenderableEnv {
         trajectory_[trajectory_size_++] = node;
       }
     } else {
-      reward = -1.0f;
+      // Jumanji's DenseReward penalizes an invalid tour by the diagonal of
+      // the unit square for every slot in its trajectory.
+      reward = -cvrp::kTrajectoryLength * std::sqrt(2.0f);
     }
     ++step_count_;
     done_ = !valid || (AllVisited() && position_ == 0) ||

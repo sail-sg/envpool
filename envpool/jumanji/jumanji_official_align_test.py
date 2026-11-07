@@ -385,6 +385,20 @@ def _native_reset_reference(
     info: dict,
 ) -> tuple[Any, Any]:
     """Use actual native reset state when RNG streams need not agree."""
+    if task_id == "CVRP-v1":
+        coordinates = obs["coordinates"][0]
+        assert np.all((coordinates >= 0) & (coordinates < 1))
+        demand_units = obs["demands"][0] * official.max_capacity
+        demands = np.rint(demand_units).astype(np.int32)
+        np.testing.assert_allclose(demand_units, demands, rtol=0, atol=1e-6)
+        assert demands[0] == 0
+        assert np.all((demands[1:] >= 1) & (demands[1:] < official.max_demand))
+        state = state.replace(
+            coordinates=jnp.asarray(coordinates), demands=jnp.asarray(demands)
+        )
+        return state, timestep.replace(
+            observation=official._state_to_observation(state)
+        )
     if task_id in ("Game2048-v1", "Snake-v1", "Tetris-v0"):
         return _sampled_reset(task_id, official, state, timestep, obs)
     if task_id != "SearchAndRescue-v0":
@@ -957,6 +971,7 @@ class JumanjiOfficialAlignTest(parameterized.TestCase):
                     task_id, official_state, official_timestep.observation
                 )
                 if task_id in (
+                    "CVRP-v1",
                     "SearchAndRescue-v0",
                     "Game2048-v1",
                     "Snake-v1",
@@ -1075,6 +1090,7 @@ class JumanjiOfficialAlignTest(parameterized.TestCase):
                     task_id, official_state, official_timestep.observation
                 )
                 if task_id in (
+                    "CVRP-v1",
                     "SearchAndRescue-v0",
                     "Game2048-v1",
                     "Snake-v1",

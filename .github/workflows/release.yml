@@ -130,7 +130,9 @@ jobs:
           java-version: "25"
       - name: Install build dependencies
         run: |
-          dnf install -y git curl wget zsh gcc gcc-c++ make tmux mesa-libEGL-devel mesa-libGL-devel libglvnd-devel mesa-dri-drivers libX11-devel libXext-devel
+          # AlmaLinux supplies these packages on both architectures. Avoid
+          # resolving unused EPEL metadata, which can fail before building.
+          dnf --disablerepo='epel*' install -y git curl wget zsh gcc gcc-c++ make tmux mesa-libEGL-devel mesa-libGL-devel libglvnd-devel mesa-dri-drivers libX11-devel libXext-devel
           dnf clean all
           GOBIN=/usr/local/bin go install github.com/bazelbuild/bazelisk@latest
           ln -sf /usr/local/bin/bazelisk /usr/local/bin/bazel
@@ -203,7 +205,7 @@ jobs:
         shell: bash
         run: |
           # llvm-libs alone can resolve to the old LLVM 17 compatibility package.
-          dnf install -y llvm-devel libdrm
+          dnf --disablerepo='epel*' install -y llvm-devel libdrm
           echo "llvm=$(llvm-config --version)" >> "$GITHUB_OUTPUT"
       - name: Cache Mesa software renderer
         id: mesa-cache
@@ -215,7 +217,7 @@ jobs:
         if: steps.mesa-cache.outputs.cache-hit != 'true'
         shell: bash
         run: |
-          dnf install -y libdrm-devel libglvnd-devel expat-devel zlib-devel libzstd-devel elfutils-libelf-devel flex bison
+          dnf --disablerepo='epel*' install -y libdrm-devel libglvnd-devel expat-devel zlib-devel libzstd-devel elfutils-libelf-devel flex bison
           # The cached native driver is independent of the wheel's Python ABI.
           export PATH="/opt/python/cp312-cp312/bin:$PATH"
           python3 -m pip install meson ninja Mako PyYAML packaging

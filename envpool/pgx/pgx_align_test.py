@@ -16,12 +16,14 @@
 from __future__ import annotations
 
 from typing import Any
+from unittest.mock import patch
 
 import jax
 import jax.numpy as jnp
 import numpy as np
 import pgx
 from absl.testing import absltest
+from pgx import backgammon, play2048
 from pgx.go import Go
 
 import envpool.pgx.registration  # noqa: F401
@@ -110,11 +112,16 @@ def _make_pgx_go(oracle_id: str, size: int, **kwargs: Any) -> Any:
 
 
 def _init_oracle_for_current_player(oracle: Any, current_player: int) -> Any:
-    for seed in range(64):
-        state = oracle.init(jax.random.PRNGKey(seed))
-        if int(np.asarray(state.current_player)) == current_player:
-            return state
-    raise AssertionError(f"could not sync PGX current player {current_player}")
+    assert current_player in (0, 1)
+    state = oracle.init(jax.random.PRNGKey(0))
+    # Some games keep a separate color-to-player assignment.
+    if (
+        hasattr(state, "_player_order")
+        and current_player != state.current_player
+    ):
+        state = state.replace(_player_order=state._player_order[::-1])
+    state = state.replace(current_player=jnp.int32(current_player))
+    return state.replace(observation=oracle.observe(state))
 
 
 def _oracle_board(state: Any, size: int) -> np.ndarray:
@@ -138,6 +145,14 @@ def _pick_legal(mask: np.ndarray, step: int) -> int:
     if actions.size == 0:
         raise AssertionError("oracle returned no legal actions")
     return int(actions[(step * 5 + 1) % actions.size])
+
+
+def _assert_uniform_counts(counts: np.ndarray, samples: int) -> None:
+    probability = 1 / counts.size
+    mean = samples * probability
+    np.testing.assert_allclose(
+        counts, mean, rtol=0, atol=6 * np.sqrt(mean * (1 - probability))
+    )
 
 
 class PgxGoAlignTest(absltest.TestCase):
@@ -578,13 +593,15 @@ class PgxCardGameAlignTest(absltest.TestCase):
         current_player: int,
         cards: np.ndarray,
     ) -> Any:
-        for seed in range(16384):
-            state = oracle.init(jax.random.PRNGKey(seed))
-            if int(np.asarray(state.current_player)) != current_player:
-                continue
-            if np.array_equal(np.asarray(state._cards), cards):
-                return state
-        raise AssertionError("could not sync PGX card deal")
+        state = _init_oracle_for_current_player(oracle, current_player)
+        self.assertEqual(cards.shape, state._cards.shape)
+        self.assertTrue(np.all((cards >= 0) & (cards < 3)))
+        leduc = hasattr(state, "_first_player")
+        self.assertLessEqual(np.bincount(cards).max(), 2 if leduc else 1)
+        state = state.replace(_cards=jnp.asarray(cards))
+        if leduc:
+            state = state.replace(_first_player=state.current_player)
+        return state.replace(observation=oracle.observe(state))
 
     def _assert_state_matches(
         self,
@@ -808,17 +825,6 @@ class PgxGardnerChessAlignTest(absltest.TestCase):
             k=1,
         )
 
-    def _init_oracle_for_current_player(
-        self,
-        oracle: Any,
-        current_player: int,
-    ) -> Any:
-        for seed in range(64):
-            state = oracle.init(jax.random.PRNGKey(seed))
-            if int(np.asarray(state.current_player)) == current_player:
-                return state
-        raise AssertionError("could not sync PGX Gardner Chess current player")
-
     def _assert_state_matches(
         self,
         oracle: Any,
@@ -867,7 +873,7 @@ class PgxGardnerChessAlignTest(absltest.TestCase):
         env = make_gymnasium("GardnerChess-v1", num_envs=1, seed=0)
         oracle = pgx.make("gardner_chess")
         obs, info = env.reset()
-        oracle_state = self._init_oracle_for_current_player(
+        oracle_state = _init_oracle_for_current_player(
             oracle,
             int(info["current_player"][0]),
         )
@@ -910,17 +916,6 @@ class PgxChessAlignTest(absltest.TestCase):
             np.asarray(oracle_state._x.board, dtype=np.int32).reshape(8, 8),
             k=1,
         )
-
-    def _init_oracle_for_current_player(
-        self,
-        oracle: Any,
-        current_player: int,
-    ) -> Any:
-        for seed in range(64):
-            state = oracle.init(jax.random.PRNGKey(seed))
-            if int(np.asarray(state.current_player)) == current_player:
-                return state
-        raise AssertionError("could not sync PGX Chess current player")
 
     def _assert_state_matches(
         self,
@@ -979,7 +974,7 @@ class PgxChessAlignTest(absltest.TestCase):
         env = make_gymnasium("Chess-v1", num_envs=1, seed=0)
         oracle = pgx.make("chess")
         obs, info = env.reset()
-        oracle_state = self._init_oracle_for_current_player(
+        oracle_state = _init_oracle_for_current_player(
             oracle,
             int(info["current_player"][0]),
         )
@@ -1022,17 +1017,6 @@ class PgxShogiAlignTest(absltest.TestCase):
             np.asarray(oracle_state._x.board, dtype=np.int32).reshape(9, 9),
             k=3,
         )
-
-    def _init_oracle_for_current_player(
-        self,
-        oracle: Any,
-        current_player: int,
-    ) -> Any:
-        for seed in range(64):
-            state = oracle.init(jax.random.PRNGKey(seed))
-            if int(np.asarray(state.current_player)) == current_player:
-                return state
-        raise AssertionError("could not sync PGX Shogi current player")
 
     def _assert_state_matches(
         self,
@@ -1079,7 +1063,7 @@ class PgxShogiAlignTest(absltest.TestCase):
         env = make_gymnasium("Shogi-v1", num_envs=1, seed=0)
         oracle = pgx.make("shogi")
         obs, info = env.reset()
-        oracle_state = self._init_oracle_for_current_player(
+        oracle_state = _init_oracle_for_current_player(
             oracle,
             int(info["current_player"][0]),
         )
@@ -1117,80 +1101,6 @@ class PgxBackgammonAlignTest(absltest.TestCase):
         super().setUp()
         self.assertEqual(pgx.__version__, _PGX_VERSION)
 
-    def _state_signature(self, state: Any) -> np.ndarray:
-        return np.concatenate((
-            np.asarray(state._board, dtype=np.int32),
-            np.asarray(state._dice, dtype=np.int32),
-            np.asarray(state._playable_dice, dtype=np.int32),
-            np.asarray(
-                [state.current_player, state._played_dice_num, state._turn],
-                dtype=np.int32,
-            ),
-        ))
-
-    def _info_signature(self, info: dict[str, Any]) -> np.ndarray:
-        return np.concatenate((
-            np.asarray(info["board"][0], dtype=np.int32),
-            np.asarray(info["dice"][0], dtype=np.int32),
-            np.asarray(info["playable_dice"][0], dtype=np.int32),
-            np.asarray(
-                [
-                    info["current_player"][0],
-                    info["played_dice_num"][0],
-                    info["turn"][0],
-                ],
-                dtype=np.int32,
-            ),
-        ))
-
-    def _find_reset_state(self, oracle: Any, info: dict[str, Any]) -> Any:
-        target = self._info_signature(info)
-        for seed in range(4096):
-            state = oracle.init(jax.random.PRNGKey(seed))
-            if np.array_equal(self._state_signature(state), target):
-                return state
-        raise AssertionError("could not sync PGX Backgammon reset state")
-
-    def _find_step_state(
-        self,
-        oracle: Any,
-        oracle_state: Any,
-        action: int,
-        info: dict[str, Any],
-    ) -> Any:
-        target = self._info_signature(info)
-        seeds = jnp.arange(4096, dtype=jnp.uint32)
-
-        def step_signature(seed: Any) -> Any:
-            state = oracle.step(
-                oracle_state,
-                jnp.int32(action),
-                jax.random.PRNGKey(seed),
-            )
-            return jnp.concatenate((
-                state._board,
-                state._dice,
-                state._playable_dice,
-                jnp.asarray(
-                    [
-                        state.current_player,
-                        state._played_dice_num,
-                        state._turn,
-                    ],
-                    dtype=jnp.int32,
-                ),
-            ))
-
-        signatures = np.asarray(jax.jit(jax.vmap(step_signature))(seeds))
-        matches = np.flatnonzero(np.all(signatures == target, axis=1))
-        if matches.size == 0:
-            raise AssertionError("could not sync PGX Backgammon step key")
-        return oracle.step(
-            oracle_state,
-            jnp.int32(action),
-            jax.random.PRNGKey(int(matches[0])),
-        )
-
     def _assert_state_matches(
         self,
         oracle: Any,
@@ -1205,9 +1115,20 @@ class PgxBackgammonAlignTest(absltest.TestCase):
             int(env_info["elapsed_step"][0]),
             int(np.asarray(oracle_state._step_count)),
         )
-        np.testing.assert_array_equal(
-            self._info_signature(env_info),
-            self._state_signature(oracle_state),
+        for name in (
+            "board",
+            "dice",
+            "playable_dice",
+            "played_dice_num",
+            "turn",
+        ):
+            np.testing.assert_array_equal(
+                env_info[name][0],
+                getattr(oracle_state, f"_{name}"),
+                err_msg=name,
+            )
+        self.assertEqual(
+            env_info["current_player"][0], oracle_state.current_player
         )
         np.testing.assert_array_equal(
             env_info["legal_action_mask"][0],
@@ -1220,38 +1141,97 @@ class PgxBackgammonAlignTest(absltest.TestCase):
             )
 
     def test_backgammon_rollout_aligns_with_pgx_oracle(self) -> None:
-        """Backgammon rollout should match PGX with synchronized dice keys."""
+        """Check the whole transition while supplying only the rolled dice."""
         env = make_gymnasium("Backgammon-v1", num_envs=1, seed=0)
         oracle = pgx.make("backgammon")
-        obs, info = env.reset()
-        oracle_state = self._find_reset_state(oracle, info)
-        self._assert_state_matches(oracle, oracle_state, obs, info)
-        for step in range(12):
-            action = _pick_legal(
-                np.asarray(oracle_state.legal_action_mask),
-                step,
-            )
-            env_step = env.step(np.asarray([action], dtype=np.int32))
-            obs, reward, terminated, truncated, info = env_step
-            oracle_state = self._find_step_state(
-                oracle,
-                oracle_state,
-                action,
-                info,
-            )
+        key = jax.random.PRNGKey(0)
+
+        @jax.jit
+        def oracle_step(state: Any, action: Any, dice: Any) -> Any:
+            with patch.object(backgammon, "_roll_dice", return_value=dice):
+                return oracle.step(state, action, key)
+
+        try:
+            obs, info = env.reset()
+            dice = info["dice"][0]
+            player = info["current_player"][0]
+            self.assertTrue(np.all((dice >= 0) & (dice < 6)))
+            self.assertNotEqual(*dice)
+            self.assertIn(player, (0, 1))
+            with patch.object(
+                backgammon, "_roll_init_dice", return_value=jnp.asarray(dice)
+            ):
+                oracle_state = _init_oracle_for_current_player(
+                    oracle, int(player)
+                )
             self._assert_state_matches(oracle, oracle_state, obs, info)
-            np.testing.assert_array_equal(
-                reward,
-                np.asarray(oracle_state.rewards, dtype=np.float32),
+            for step in range(512):
+                action = _pick_legal(
+                    np.asarray(oracle_state.legal_action_mask), step
+                )
+                obs, reward, terminated, truncated, info = env.step(
+                    np.asarray([action], dtype=np.int32)
+                )
+                dice = info["dice"][0]
+                self.assertTrue(np.all((dice >= 0) & (dice < 6)))
+                oracle_state = oracle_step(
+                    oracle_state, jnp.int32(action), dice
+                )
+                self._assert_state_matches(oracle, oracle_state, obs, info)
+                np.testing.assert_array_equal(reward, oracle_state.rewards)
+                np.testing.assert_array_equal(
+                    terminated, [oracle_state.terminated]
+                )
+                np.testing.assert_array_equal(
+                    truncated, [oracle_state.truncated]
+                )
+                if terminated[0]:
+                    break
+            self.assertTrue(bool(oracle_state.terminated))
+        finally:
+            env.close()
+
+    def test_dice_sampling(self) -> None:
+        """Check the opening player and dice, then the first ordinary roll."""
+        count = 2048
+        env = make_gymnasium(
+            "Backgammon-v1", num_envs=count, num_threads=2, seed=0
+        )
+        try:
+            _, info = env.reset()
+            opening = info["dice"]
+            players = np.empty(count, dtype=np.int32)
+            players[info["env_id"]] = info["current_player"]
+            self.assertTrue(np.all((opening >= 0) & (opening < 6)))
+            self.assertTrue(np.all(opening[:, 0] != opening[:, 1]))
+            opening_counts = np.bincount(
+                info["current_player"] * 36 + opening[:, 0] * 6 + opening[:, 1],
+                minlength=72,
+            ).reshape(2, 6, 6)
+            _assert_uniform_counts(
+                opening_counts[:, ~np.eye(6, dtype=bool)], count
             )
-            np.testing.assert_array_equal(
-                terminated,
-                np.asarray([oracle_state.terminated], dtype=np.bool_),
+
+            pending = np.ones(count, dtype=bool)
+            rolls = np.empty_like(opening)
+            for _ in range(2):
+                actions = (
+                    info["legal_action_mask"].argmax(axis=1).astype(np.int32)
+                )
+                _, _, _, _, info = env.step(actions, env_id=info["env_id"])
+                ids = info["env_id"]
+                changed = pending[ids] & (
+                    info["current_player"] != players[ids]
+                )
+                rolls[ids[changed]] = info["dice"][changed]
+                pending[ids[changed]] = False
+            self.assertFalse(np.any(pending))
+            self.assertTrue(np.all((rolls >= 0) & (rolls < 6)))
+            _assert_uniform_counts(
+                np.bincount(rolls[:, 0] * 6 + rolls[:, 1], minlength=36), count
             )
-            np.testing.assert_array_equal(
-                truncated,
-                np.asarray([oracle_state.truncated], dtype=np.bool_),
-            )
+        finally:
+            env.close()
 
 
 class PgxSparrowMahjongAlignTest(absltest.TestCase):
@@ -1372,56 +1352,12 @@ class PgxSparrowMahjongAlignTest(absltest.TestCase):
 
 
 class PgxPlay2048AlignTest(absltest.TestCase):
-    """Alignment for PGX 2048 with matched stochastic keys."""
+    """Alignment for PGX 2048 with independently checked tile spawns."""
 
     def setUp(self) -> None:
         """Verify the oracle package stays pinned to the expected version."""
         super().setUp()
         self.assertEqual(pgx.__version__, _PGX_VERSION)
-
-    def _find_reset_state(self, oracle: Any, board: np.ndarray) -> Any:
-        seeds = jnp.arange(65536, dtype=jnp.uint32)
-        boards = np.asarray(
-            jax.jit(
-                jax.vmap(
-                    lambda seed: oracle.init(jax.random.PRNGKey(seed))._board
-                )
-            )(seeds)
-        )
-        matches = np.flatnonzero(np.all(boards == board.reshape(-1), axis=1))
-        if matches.size == 0:
-            raise AssertionError("could not sync PGX 2048 reset board")
-        return oracle.init(jax.random.PRNGKey(int(matches[0])))
-
-    def _find_step_state(
-        self,
-        oracle: Any,
-        oracle_state: Any,
-        action: int,
-        board: np.ndarray,
-    ) -> Any:
-        seeds = jnp.arange(65536, dtype=jnp.uint32)
-        boards = np.asarray(
-            jax.jit(
-                jax.vmap(
-                    lambda seed: (
-                        oracle.step(
-                            oracle_state,
-                            jnp.int32(action),
-                            jax.random.PRNGKey(seed),
-                        )._board
-                    )
-                )
-            )(seeds)
-        )
-        matches = np.flatnonzero(np.all(boards == board.reshape(-1), axis=1))
-        if matches.size == 0:
-            raise AssertionError("could not sync PGX 2048 step key")
-        return oracle.step(
-            oracle_state,
-            jnp.int32(action),
-            jax.random.PRNGKey(int(matches[0])),
-        )
 
     def _assert_state_matches(
         self,
@@ -1449,38 +1385,90 @@ class PgxPlay2048AlignTest(absltest.TestCase):
         )
 
     def test_play2048_aligns_with_pgx_oracle(self) -> None:
-        """2048 rollout should match PGX with synchronized tile-spawn keys."""
+        """Check the independent slide before supplying the spawned tile."""
         env = make_gymnasium("Play2048-v1", num_envs=1, seed=0)
         oracle = pgx.make("2048")
-        obs, info = env.reset()
-        oracle_state = self._find_reset_state(oracle, info["board"][0])
-        self._assert_state_matches(oracle, oracle_state, obs, info)
+        key = jax.random.PRNGKey(0)
 
-        for step in range(4):
-            mask = np.asarray(info["legal_action_mask"][0])
-            action = _pick_legal(mask, step)
-            obs, reward, terminated, truncated, info = env.step(
-                np.asarray([action], dtype=np.int32),
-            )
-            oracle_state = self._find_step_state(
-                oracle,
-                oracle_state,
-                action,
-                info["board"][0],
+        @jax.jit
+        def oracle_step(state: Any, action: Any, cell: Any, value: Any) -> Any:
+            def spawn(board: Any, _: Any) -> Any:
+                row, col = cell // 4, cell % 4
+                return board.at[row, col].set(
+                    jnp.where(value == 0, board[row, col], value)
+                )
+
+            with patch.object(play2048, "_add_random_num", spawn):
+                return oracle.step(state, action, key)
+
+        try:
+            obs, info = env.reset()
+            board = info["board"][0]
+            self.assertEqual(np.count_nonzero(board), 2)
+            self.assertTrue(np.isin(board, (0, 1, 2)).all())
+            oracle_state = oracle.init(key).replace(
+                _board=jnp.asarray(board).ravel(),
+                legal_action_mask=play2048._legal_action_mask(
+                    jnp.asarray(board)
+                ),
             )
             self._assert_state_matches(oracle, oracle_state, obs, info)
-            np.testing.assert_array_equal(
-                reward,
-                np.asarray(oracle_state.rewards, dtype=np.float32),
+            for step in range(512):
+                action = _pick_legal(
+                    np.asarray(oracle_state.legal_action_mask), step
+                )
+                moved = oracle_step(
+                    oracle_state, jnp.int32(action), jnp.int32(0), jnp.int32(0)
+                )
+                obs, reward, terminated, truncated, info = env.step(
+                    np.asarray([action], dtype=np.int32)
+                )
+                board = info["board"][0].ravel()
+                moved_board = np.asarray(moved._board)
+                changed = np.flatnonzero(board != moved_board)
+                self.assertEqual(changed.size, 1)
+                cell = changed[0]
+                self.assertEqual(moved_board[cell], 0)
+                self.assertIn(board[cell], (1, 2))
+                oracle_state = oracle_step(
+                    oracle_state,
+                    jnp.int32(action),
+                    jnp.int32(cell),
+                    jnp.int32(board[cell]),
+                )
+                self._assert_state_matches(oracle, oracle_state, obs, info)
+                np.testing.assert_array_equal(reward, oracle_state.rewards)
+                np.testing.assert_array_equal(
+                    terminated, [oracle_state.terminated]
+                )
+                np.testing.assert_array_equal(
+                    truncated, [oracle_state.truncated]
+                )
+                if terminated[0]:
+                    break
+            self.assertTrue(bool(oracle_state.terminated))
+        finally:
+            env.close()
+
+    def test_spawn_sampling(self) -> None:
+        """Check the native tile positions and values without synchronization."""
+        count = 2048
+        env = make_gymnasium(
+            "Play2048-v1", num_envs=count, num_threads=2, seed=0
+        )
+        try:
+            _, info = env.reset()
+            boards = info["board"].reshape(count, 16)
+            self.assertTrue(np.isin(boards, (0, 1, 2)).all())
+            np.testing.assert_array_equal(np.count_nonzero(boards, axis=1), 2)
+            _assert_uniform_counts(np.count_nonzero(boards, axis=0), 2 * count)
+            self.assertAlmostEqual(
+                np.count_nonzero(boards == 2) / (2 * count),
+                0.1,
+                delta=6 * np.sqrt(0.1 * 0.9 / (2 * count)),
             )
-            np.testing.assert_array_equal(
-                terminated,
-                np.asarray([oracle_state.terminated], dtype=np.bool_),
-            )
-            np.testing.assert_array_equal(
-                truncated,
-                np.asarray([oracle_state.truncated], dtype=np.bool_),
-            )
+        finally:
+            env.close()
 
 
 if __name__ == "__main__":
