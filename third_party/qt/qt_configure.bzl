@@ -18,6 +18,11 @@ def _path_exists(repository_ctx, path):
     return path != None and repository_ctx.path(path).exists
 
 def _resolve_qt_include_dir(repository_ctx, raw_path):
+    # Homebrew can put forwarding headers in include/. Prefer the actual
+    # public headers from the frameworks we link on macOS.
+    if _path_exists(repository_ctx, raw_path + "/lib/QtCore.framework/Headers"):
+        return raw_path + "/lib"
+
     candidates = [
         raw_path,
         raw_path + "/include",
@@ -28,9 +33,6 @@ def _resolve_qt_include_dir(repository_ctx, raw_path):
         if _path_exists(repository_ctx, candidate) and repository_ctx.path(candidate + "/QtCore").exists:
             return candidate
 
-    # Homebrew Qt 6 keeps public headers inside its frameworks.
-    if _path_exists(repository_ctx, raw_path + "/lib/QtCore.framework/Headers"):
-        return raw_path + "/lib"
     return None
 
 def _resolve_qt_lib_dir(repository_ctx, raw_path, include_dir):
