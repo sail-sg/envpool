@@ -246,7 +246,7 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-macos
       cancel-in-progress: false
-    runs-on: macos-14
+    runs-on: macos-15
     # Leave time to save the cache after a cold build and the full oracle suite.
     timeout-minutes: 300
     env:
