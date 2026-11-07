@@ -23,7 +23,7 @@
 #include <utility>
 #include <vector>
 
-#include "envpool/craftax/random.h"
+#include "envpool/utils/random.h"
 
 namespace craftax {
 
@@ -54,6 +54,17 @@ inline float TorchLight(Pos offset) {
   return std::clamp(1.0f - EuclideanDistance(offset, {}) * 0.2f, 0.0f, 1.0f);
 }
 
+template <typename Predicate>
+int SampleCell(envpool::Random& rng, int size, Predicate valid) {
+  std::vector<int> cells;
+  for (int i = 0; i < size; ++i) {
+    if (valid(i)) {
+      cells.push_back(i);
+    }
+  }
+  return cells.empty() ? -1 : cells[rng.Integer(cells.size())];
+}
+
 struct Mob {
   Pos position;
   float health{0};
@@ -74,7 +85,6 @@ struct Inventory {
 
 struct Params {
   bool classic{false};
-  bool symbolic{true};
   int height{48}, width{48}, levels{9};
   int max_timesteps{100000}, day_length{300};
   bool always_diamond{false}, god_mode{false};
@@ -128,7 +138,7 @@ struct State {
   int boss_progress{0}, boss_timesteps_to_spawn_this_round{0};
   float light_level{1};
   std::vector<std::uint8_t> achievements;
-  Key state_rng{};
+  std::array<std::uint32_t, 2> render_seed{};
   int timestep{0};
 };
 
@@ -137,10 +147,13 @@ class Game {
   Params params;
   State state;
 
-  explicit Game(Params config) : params(std::move(config)) { Initialize(); }
+  explicit Game(Params config, std::uint32_t seed = 0)
+      : params(std::move(config)), rng_(seed) {
+    Initialize();
+  }
   void Initialize();
-  void Reset(Key rng);
-  float Step(Key rng, int action);
+  void Reset();
+  float Step(int action);
   bool Done() const;
   static float ClassicScore(const std::vector<std::uint8_t>& achievements,
                             bool done);
@@ -209,18 +222,18 @@ class Game {
   float Light(int timestep) const;
   void MoveMob(Mob* mob, Pos proposed, int cooldown);
 
-  void ClassicWorld(Key rng);
+  void ClassicWorld();
   void ClassicCraft(int action);
-  void ClassicDo(Key rng, int action);
+  void ClassicDo(int action);
   void ClassicPlace(int action);
   void ClassicMove(int action);
-  void ClassicMobs(Key rng);
-  void ClassicSpawn(Key rng);
+  void ClassicMobs();
+  void ClassicSpawn();
   void ClassicIntrinsics(int action);
   void Plants();
-  float ClassicStep(Key rng, int action);
+  float ClassicStep(int action);
 
-  void FullWorld(Key rng);
+  void FullWorld();
   bool FullSolid(Pos pos) const;
   bool FullValid(Pos pos, const int* collision) const;
   bool BossVulnerable() const;
@@ -229,17 +242,23 @@ class Game {
   bool Attack(Pos pos, const std::array<float, 3>& damage, bool can_eat);
   bool Projectile(Pos pos, Pos direction, int type, bool player);
   void FullCraft(int action);
-  void FullDo(Key rng, int action);
+  void FullDo(int action);
   void FullPlace(int action);
   void FullChangeFloor(int action);
-  void FullUse(Key book_rng, Key enchant_rng, int action);
+  void FullUse(int action);
   void FullMove(int action);
-  void FullMobs(Key rng);
-  void FullSpawn(Key rng);
+  void FullMobs();
+  void FullSpawn();
   void FullIntrinsics(int action);
   void FullAchievements();
-  float FullStep(Key rng, int action);
+  float FullStep(int action);
   std::vector<float> FullSymbolic() const;
+
+ private:
+  envpool::Random rng_;
+
+  Pos TowardPlayer(Pos pos);
+  void SampleRenderSeed() { state.render_seed = {rng_.Bits(), rng_.Bits()}; }
 };
 
 }  // namespace craftax

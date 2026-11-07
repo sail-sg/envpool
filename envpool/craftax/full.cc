@@ -272,7 +272,7 @@ void Game::FullAchievements() {
   }
 }
 
-float Game::FullStep(Key rng, int action) {
+float Game::FullStep(int action) {
   const auto achievements = state.achievements;
   const float health = state.player_health;
   if (state.is_sleeping || state.is_resting) {
@@ -280,11 +280,9 @@ float Game::FullStep(Key rng, int action) {
   }
   FullChangeFloor(action);
   FullCraft(action);
-  FullDo(TakeKey(&rng), action);
+  FullDo(action);
   FullPlace(action);
-  const Key book = TakeKey(&rng);
-  const Key enchant = TakeKey(&rng);
-  FullUse(book, enchant, action);
+  FullUse(action);
   state.achievements[c::DEFEAT_NECROMANCER] |=
       static_cast<int>(state.boss_progress >= params.levels - 1);
   state.boss_timesteps_to_spawn_this_round -=
@@ -303,8 +301,8 @@ float Game::FullStep(Key rng, int action) {
     --state.player_xp;
   }
   FullMove(action);
-  FullMobs(TakeKey(&rng));
-  FullSpawn(TakeKey(&rng));
+  FullMobs();
+  FullSpawn();
   Plants();
   FullIntrinsics(action);
   auto& inv = state.inventory;
@@ -352,7 +350,6 @@ float Game::FullStep(Key rng, int action) {
       std::fma(state.player_health - health, 0.1f, static_cast<float>(earned));
   ++state.timestep;
   state.light_level = Light(state.timestep);
-  state.state_rng = TakeKey(&rng);
   return reward;
 }
 

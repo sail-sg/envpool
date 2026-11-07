@@ -47,7 +47,11 @@ class CraftaxTest(parameterized.TestCase):
         classic = "-Classic-" in task_id
         pixels = "-Pixels-" in task_id
         kwargs = dict(
-            num_envs=3, seed=123, max_episode_steps=97, render_mode="rgb_array"
+            num_envs=3,
+            seed=123,
+            max_episode_steps=97,
+            render_mode="rgb_array",
+            debug_state=True,
         )
         left = make_gymnasium(task_id, num_threads=1, **kwargs)
         alias = "Craftax/" + task_id.removeprefix("Craftax-")

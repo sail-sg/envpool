@@ -21,15 +21,17 @@ from absl.testing import absltest, parameterized
 import envpool.craftax.registration  # noqa: F401
 from envpool.craftax.oracle import (
     assert_floats,
-    assert_pixels,
+    assert_render,
     assert_state,
     encode,
     factory_names,
     jax,
     make_oracle,
-    native,
-    renderer,
     reset_info,
+    rollout_action,
+    state_layout,
+    symbolic_observer,
+    sync_world,
 )
 from envpool.registration import make_gymnasium
 
@@ -90,9 +92,7 @@ class CraftaxAlignmentTest(parameterized.TestCase):
         )
         rng = np.random.default_rng(17)
         angles = tuple(rng.random(shape, dtype=np.float32) for shape in shapes)
-        dynamic = dict(
-            day_length=96, always_diamond=True, mob_despawn_distance=12
-        )
+        dynamic = dict(day_length=96, always_diamond=True)
         if classic:
             dynamic.update(zombie_health=6, cow_health=4, skeleton_health=5)
         else:
@@ -128,18 +128,37 @@ class CraftaxAlignmentTest(parameterized.TestCase):
         reference: tuple[Any, Any] | None = None,
         options: dict[str, Any] | None = None,
     ) -> None:
-        """Compare a whole public-pool trajectory without intermediate state writes."""
+        """Copy generated terrain at reset and compare independent episodes."""
         classic = "-Classic-" in task_id
+        pixel = "-Pixels-" in task_id
         auto = "-AutoReset-" in task_id
         oracle, params = reference or make_oracle(task_id, max_steps)
+        # The native suite exercises default spawns. The short despawn range
+        # leaves no eligible surface spawn positions in this continuous rollout.
+        params = params.replace(mob_despawn_distance=1)
         if god_mode:
             params = params.replace(god_mode=True)
-        step = jax.jit(oracle.step)
-        render = renderer(classic, tile)
-        diagnostic = native.Game(native.Params(classic))
-        layout = diagnostic.get_state()
-        key = jax.random.PRNGKey(seed)
-        expected_obs, state = oracle.reset(key, params)
+
+        @jax.jit
+        def step(key: Any, state: Any, action: int, params: Any) -> Any:
+            return oracle.step_env(key, state, action, params)[1:]
+
+        get_obs = symbolic_observer(oracle, classic)
+
+        def assert_observation(
+            obs: np.ndarray, state: Any, message: str = ""
+        ) -> None:
+            if pixel:
+                assert_render(
+                    obs * 255, state, classic, 7 if classic else 10, message
+                )
+            else:
+                assert_floats(obs, get_obs(state), message)
+
+        key = jax.random.PRNGKey(seed + 1000)
+        _, reset_state = oracle.reset(key, params)
+        layout = state_layout(reset_state, classic)
+        state = reset_state
         kwargs: dict[str, Any] = dict(options or {})
         if initial:
             state = state.replace(
@@ -149,7 +168,6 @@ class CraftaxAlignmentTest(parameterized.TestCase):
                 achievements=jax.numpy.ones_like(state.achievements),
             )
             kwargs["initial_state"] = encode(state, layout).tolist()
-            expected_obs = jax.jit(oracle.get_obs)(state)
         env = make_gymnasium(
             task_id,
             num_envs=1,
@@ -159,6 +177,7 @@ class CraftaxAlignmentTest(parameterized.TestCase):
             render_mode="rgb_array",
             render_tile_size=tile,
             god_mode=god_mode,
+            mob_despawn_distance=1,
             **kwargs,
         )
         obs, info = env.reset()
@@ -166,11 +185,13 @@ class CraftaxAlignmentTest(parameterized.TestCase):
         self.assertEqual(env.observation_space.shape, space.shape)
         self.assertEqual(env.observation_space.dtype, space.dtype)
         self.assertEqual(env.action_space.n, oracle.num_actions)
-        # Default resets match without synchronization; directed fixtures use
-        # only initial_state at the first reset, never a mid-episode write.
-        assert_floats(obs[0], expected_obs)
+        if not initial:
+            state = sync_world(
+                reset_state, info["state"][0], layout, classic, params
+            )
+        assert_observation(obs[0], state)
         assert_state(info["state"][0], state, layout)
-        assert_pixels(np.asarray(env.render())[0], render(state))
+        assert_render(np.asarray(env.render())[0], state, classic, tile)
         rng = np.random.default_rng(2026)
         done = False
         episodes = 0
@@ -180,33 +201,48 @@ class CraftaxAlignmentTest(parameterized.TestCase):
                 action = int(rng.integers(env.action_space.n))
                 if god_mode:
                     action = 1 if t < 96 else 2
-                reset = done and not auto
-                if reset:
-                    expected_obs, state = oracle.reset(draw, params)
-                    expected_reward, expected_done = 0.0, False
-                    expected_info = reset_info(state, classic)
                 else:
-                    (
-                        expected_obs,
-                        state,
-                        expected_reward,
-                        expected_done,
-                        expected_info,
-                    ) = step(draw, state, action, params)
+                    action = rollout_action(state, action, classic)
+                reset = done and not auto
                 obs, reward, terminated, truncated, info = env.step(
                     np.array([action], np.int32)
                 )
+                expected_trunc = False
+                if reset:
+                    state = sync_world(
+                        reset_state, info["state"][0], layout, classic, params
+                    )
+                    expected_reward, expected_done = 0.0, False
+                    expected_info = reset_info(state, classic)
+                else:
+                    state, expected_reward, expected_done, expected_info = step(
+                        draw, state, action, params
+                    )
+                    if bool(expected_done):
+                        expected_trunc = not bool(
+                            oracle.is_terminal(
+                                state,
+                                params.replace(max_timesteps=max_steps + 1),
+                            )
+                        )
                 message = f"{task_id} step {t}, action {action}"
-                assert_floats(obs[0], expected_obs, message)
                 np.testing.assert_array_equal(
                     reward[0], expected_reward, err_msg=message
                 )
                 self.assertEqual(
-                    bool(terminated[0] or truncated[0]),
-                    bool(expected_done),
+                    bool(terminated[0]),
+                    bool(expected_done) and not expected_trunc,
                     message,
                 )
+                self.assertEqual(bool(truncated[0]), expected_trunc, message)
+                # The official terminal reward, flags and info refer to the
+                # old episode even when the pool publishes a fresh observation.
+                if bool(expected_done) and auto:
+                    state = sync_world(
+                        reset_state, info["state"][0], layout, classic, params
+                    )
                 assert_state(info["state"][0], state, layout, message)
+                assert_observation(obs[0], state, message)
                 for name, value in expected_info.items():
                     if name == "score":
                         assert_floats(info[name][0], value, message + " score")
@@ -215,24 +251,25 @@ class CraftaxAlignmentTest(parameterized.TestCase):
                             info[name][0], value, err_msg=message + " " + name
                         )
                 if t % 29 == 0 or bool(expected_done):
-                    assert_pixels(
-                        np.asarray(env.render())[0], render(state), message
+                    assert_render(
+                        np.asarray(env.render())[0],
+                        state,
+                        classic,
+                        tile,
+                        message,
                     )
                 done = bool(expected_done)
                 episodes += done
             self.assertGreaterEqual(episodes, steps // max_steps)
             if initial:
                 # A later explicit reset must not reuse the injected inventory
-                # or achievements. It consumes the next ordinary stream key.
-                key, draw = jax.random.split(key)
-                expected_obs, state = oracle.reset(draw, params)
+                # or achievements.
                 obs, info = env.reset()
-                assert_floats(obs[0], expected_obs)
-                np.testing.assert_array_equal(
-                    info["state"][0], encode(state, layout)
+                state = sync_world(
+                    reset_state, info["state"][0], layout, classic, params
                 )
-                self.assertEqual(int(state.inventory.wood), 0)
-                self.assertFalse(np.any(state.achievements))
+                assert_observation(obs[0], state)
+                assert_state(info["state"][0], state, layout)
         finally:
             env.close()
 

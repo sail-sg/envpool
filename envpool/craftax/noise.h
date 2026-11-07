@@ -23,18 +23,18 @@
 #include <cmath>
 #include <vector>
 
-#include "envpool/craftax/random.h"
+#include "envpool/utils/random.h"
 
 namespace craftax {
 
-inline std::vector<float> Noise(Key rng, int height, int width, int res_y,
-                                int res_x,
+inline std::vector<float> Noise(envpool::Random& rng, int height, int width,
+                                int res_y, int res_x,
                                 const std::vector<float>& angles = {}) {
-  rng = Split(Split(rng, 1), 1);
   std::vector<std::array<float, 2>> gradients((res_y + 1) * (res_x + 1));
   for (std::size_t i = 0; i < gradients.size(); ++i) {
     const float angle =
-        6.283185307179586f * (angles.empty() ? Uniform(rng, i) : angles.at(i));
+        6.283185307179586f *
+        (angles.empty() ? static_cast<float>(rng.Uniform()) : angles.at(i));
     gradients[i] = {std::cos(angle), std::sin(angle)};
   }
   const int dy = height / res_y;

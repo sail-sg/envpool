@@ -26,7 +26,7 @@ namespace craftax {
 namespace b = full::block;
 namespace i = full::item;
 
-static void SmoothWorld(Game* game, Key rng,
+static void SmoothWorld(Game* game, envpool::Random& rng,
                         const full::SmoothGenConfig& config, int level) {
   auto& s = game->state;
   const auto& p = game->params;
@@ -34,16 +34,10 @@ static void SmoothWorld(Game* game, Key rng,
   const int w = p.width;
   const int cells = game->Cells();
   s.player_level = level;
-  auto water =
-      Noise(TakeKey(&rng), h, w, h / 16, w / 16, p.fractal_noise_angles[0]);
-  TakeKey(&rng);
-  auto mountain =
-      Noise(TakeKey(&rng), h, w, h / 16, w / 16, p.fractal_noise_angles[1]);
-  const auto path =
-      Noise(TakeKey(&rng), h, w, h / 8, w / 2, p.fractal_noise_angles[2]);
-  TakeKey(&rng);
-  const auto tree =
-      Noise(TakeKey(&rng), h, w, h / 4, w / 4, p.fractal_noise_angles[3]);
+  auto water = Noise(rng, h, w, h / 16, w / 16, p.fractal_noise_angles[0]);
+  auto mountain = Noise(rng, h, w, h / 16, w / 16, p.fractal_noise_angles[1]);
+  const auto path = Noise(rng, h, w, h / 8, w / 2, p.fractal_noise_angles[2]);
+  const auto tree = Noise(rng, h, w, h / 4, w / 4, p.fractal_noise_angles[3]);
   std::vector<int> blocks(cells);
   for (int y = 0; y < h; ++y) {
     for (int x = 0; x < w; ++x) {
@@ -77,49 +71,44 @@ static void SmoothWorld(Game* game, Key rng,
       }
       if (block == config.tree_requirement_block &&
           static_cast<float>(tree[i] > config.tree_threshold_perlin) *
-                  Uniform(rng, i) >
+                  rng.Uniform() >
               config.tree_threshold_uniform) {
         block = config.tree;
       }
       blocks[i] = block;
     }
   }
-  Key ore_rng = TakeKey(&rng);
   for (int ore = 0; ore < 5; ++ore) {
-    const Key draw = TakeKey(&ore_rng);
     for (int i = 0; i < cells; ++i) {
       if (blocks[i] == config.ore_requirement_blocks[ore] &&
-          Uniform(draw, i) < config.ore_chances[ore]) {
+          rng.Uniform() < config.ore_chances[ore]) {
         blocks[i] = config.ores[ore];
       }
     }
   }
   std::vector<std::uint8_t> lava(cells);
-  std::vector<float> weights(cells);
-  int count = 0;
   for (int i = 0; i < cells; ++i) {
     lava[i] = static_cast<std::uint8_t>(mountain[i] > 0.85f && tree[i] > 0.7f);
     if (lava[i] != 0u) {
       blocks[i] = config.lava;
     }
-    weights[i] = static_cast<float>(blocks[i] == b::STONE);
-    count += static_cast<int>(blocks[i] == b::STONE);
   }
-  for (auto& weight : weights) {
-    weight /= static_cast<float>(count);
-  }
-  const int diamond = std::clamp(Choice(TakeKey(&rng), weights), 0, cells - 1);
+  const int diamond = std::max(0, SampleCell(rng, cells, [&](int cell) {
+                                 return blocks[cell] == b::STONE;
+                               }));
   blocks[diamond] = config.default_block == b::GRASS && p.always_diamond
                         ? b::DIAMOND
                         : b::STONE;
   blocks[s.player_position.y * w + s.player_position.x] = config.player_spawn;
-  for (int i = 0; i < cells; ++i) {
-    weights[i] = static_cast<float>(blocks[i] == config.valid_ladder);
-  }
-  const int down = std::clamp(Choice(TakeKey(&rng), weights), 0, cells - 1);
-  const int up = std::clamp(Choice(TakeKey(&rng), weights), 0, cells - 1);
-  s.down_ladders[level] = {down / h, down % h};
-  s.up_ladders[level] = {up / h, up % h};
+  auto sample_ladder = [&] {
+    return std::max(0, SampleCell(rng, cells, [&](int cell) {
+                      return blocks[cell] == config.valid_ladder;
+                    }));
+  };
+  const int down = sample_ladder();
+  const int up = sample_ladder();
+  s.down_ladders[level] = {down / w, down % w};
+  s.up_ladders[level] = {up / w, up % w};
   const int base = level * cells;
   std::copy(blocks.begin(), blocks.end(), s.map.begin() + base);
   if (config.ladder_down != 0) {
@@ -165,8 +154,8 @@ static void SmoothWorld(Game* game, Key rng,
   }
 }
 
-static void Dungeon(Game* game, Key rng, const full::DungeonConfig& config,
-                    int level) {
+static void Dungeon(Game* game, envpool::Random& rng,
+                    const full::DungeonConfig& config, int level) {
   auto& s = game->state;
   const int h = game->params.height;
   const int w = game->params.width;
@@ -179,23 +168,18 @@ static void Dungeon(Game* game, Key rng, const full::DungeonConfig& config,
   for (int y = 10; y < h + 10; ++y) {
     std::fill_n(blocks.begin() + y * pw + 10, w, b::WALL);
   }
-  const Key sizes_key = Split(rng, 2);
-  rng = Split(rng, 0);
   std::array<Pos, 8> sizes;
   std::array<Pos, 8> positions;
-  for (int i = 0; i < 8; ++i) {
-    sizes[i] = {RandInt(sizes_key, 5, 10, i * 2),
-                RandInt(sizes_key, 5, 10, i * 2 + 1)};
+  for (auto& size : sizes) {
+    size = {5 + rng.Integer(5), 5 + rng.Integer(5)};
   }
-  std::vector<float> occupancy(chunks * chunks, 1.0f);
-  Key rooms_rng = TakeKey(&rng);
+  std::vector<int> room_chunks(chunks * chunks);
+  std::iota(room_chunks.begin(), room_chunks.end(), 0);
+  rng.Shuffle(&room_chunks);
   for (int room = 0; room < 8; ++room) {
-    const int chunk = std::clamp(Choice(TakeKey(&rooms_rng), occupancy), 0,
-                                 chunks * chunks - 1);
-    occupancy[chunk] = 0;
-    const Key offset = TakeKey(&rooms_rng);
-    const Pos pos{(chunk % chunks) * 16 + 10 + RandInt(offset, 0, 11, 0),
-                  (chunk / chunks) * 16 + 10 + RandInt(offset, 0, 11, 1)};
+    const int chunk = room_chunks[room];
+    const Pos pos{(chunk % chunks) * 16 + 10 + rng.Integer(11),
+                  (chunk / chunks) * 16 + 10 + rng.Integer(11)};
     positions[room] = pos;
     for (int y = 0; y < sizes[room].y; ++y) {
       for (int x = 0; x < sizes[room].x; ++x) {
@@ -207,26 +191,21 @@ static void Dungeon(Game* game, Key rng, const full::DungeonConfig& config,
         items[(pos.y + y) * pw + pos.x + x] = i::TORCH;
       }
     }
-    const Key chest = TakeKey(&rooms_rng);
-    const Pos chest_pos{pos.y + RandInt(chest, 1, sizes[room].y - 1, 0),
-                        pos.x + RandInt(chest, 1, sizes[room].x - 1, 1)};
+    auto interior = [&] {
+      return pos + Pos{1 + rng.Integer(sizes[room].y - 2),
+                       1 + rng.Integer(sizes[room].x - 2)};
+    };
+    const Pos chest_pos = interior();
     blocks[chest_pos.y * pw + chest_pos.x] = b::CHEST;
-    const Key fountain = Split(rooms_rng, 1);
-    const Key coin = Split(rooms_rng, 2);
-    rooms_rng = Split(rooms_rng, 0);
-    const Pos fountain_pos{pos.y + RandInt(fountain, 1, sizes[room].y - 1, 0),
-                           pos.x + RandInt(fountain, 1, sizes[room].x - 1, 1)};
-    if (Uniform(coin) > 0.5f) {
+    if (rng.Uniform() < 0.5) {
+      const Pos fountain_pos = interior();
       blocks[fountain_pos.y * pw + fountain_pos.x] = config.fountain_block;
     }
   }
-  Key paths_rng = TakeKey(&rng);
-  std::vector<float> included(8);
-  included.back() = 1;
+  std::vector<int> included{7};
   for (int path = 0; path < 8; ++path) {
     const Pos source = positions[path];
-    const Pos sink =
-        positions[std::clamp(Choice(TakeKey(&paths_rng), included), 0, 7)];
+    const Pos sink = positions[included[rng.Integer(included.size())]];
     if (source.x != sink.x) {
       for (int x = std::min(source.x, sink.x); x <= std::max(source.x, sink.x);
            ++x) {
@@ -245,14 +224,10 @@ static void Dungeon(Game* game, Key rng, const full::DungeonConfig& config,
         }
       }
     }
-    included[path] = 1;
-    paths_rng = TakeKey(&paths_rng);
+    included.push_back(path);
   }
   blocks[(positions[0].y + 2) * pw + positions[0].x + 2] = config.special_block;
-  const Key rare = TakeKey(&rng);
   const int base = level * game->Cells();
-  std::vector<float> weights(game->Cells());
-  int path_count = 0;
   for (int y = 0; y < h; ++y) {
     for (int x = 0; x < w; ++x) {
       const int i = y * w + x;
@@ -265,7 +240,7 @@ static void Dungeon(Game* game, Key rng, const full::DungeonConfig& config,
           adjacent = true;
         }
       }
-      const bool is_rare = 1.0f - Uniform(rare, i) > 0.9f;
+      const bool is_rare = rng.Uniform() < 0.1;
       int block = blocks[padded];
       if (!adjacent) {
         block = b::DARKNESS;
@@ -277,38 +252,31 @@ static void Dungeon(Game* game, Key rng, const full::DungeonConfig& config,
       s.map[base + i] = block;
       s.item_map[base + i] = items[padded];
       s.light_map[base + i] = 1;
-      weights[i] = static_cast<float>(block == b::PATH);
-      path_count += static_cast<int>(block == b::PATH);
     }
   }
-  auto normalized = weights;
-  for (auto& weight : normalized) {
-    weight /= static_cast<float>(path_count);
-  }
-  const int down =
-      std::clamp(Choice(TakeKey(&rng), normalized), 0, game->Cells() - 1);
-  const int up =
-      std::clamp(Choice(TakeKey(&rng), weights), 0, game->Cells() - 1);
-  s.down_ladders[level] = {down / h, down % h};
-  s.up_ladders[level] = {up / h, up % h};
+  auto sample_ladder = [&] {
+    return std::max(0, SampleCell(rng, game->Cells(), [&](int cell) {
+                      return s.map[base + cell] == b::PATH;
+                    }));
+  };
+  const int down = sample_ladder();
+  const int up = sample_ladder();
+  s.down_ladders[level] = {down / w, down % w};
+  s.up_ladders[level] = {up / w, up % w};
   s.item_map[base + down] = i::LADDER_DOWN;
   s.item_map[base + up] = i::LADDER_UP;
 }
 
-void Game::FullWorld(Key rng) {
+void Game::FullWorld() {
   state.player_position = {params.height / 2, params.width / 2};
   const std::array<int, 6> smooth_levels{0, 2, 5, 6, 7, 8};
   for (int i = 0; i < 6; ++i) {
-    SmoothWorld(this, Split(rng, i + 1), full::ALL_SMOOTHGEN_CONFIGS[i],
-                smooth_levels[i]);
+    SmoothWorld(this, rng_, full::ALL_SMOOTHGEN_CONFIGS[i], smooth_levels[i]);
   }
-  rng = Split(rng, 0);
   const std::array<int, 3> dungeon_levels{1, 3, 4};
   for (int i = 0; i < 3; ++i) {
-    Dungeon(this, Split(rng, i + 1), full::ALL_DUNGEON_CONFIGS[i],
-            dungeon_levels[i]);
+    Dungeon(this, rng_, full::ALL_DUNGEON_CONFIGS[i], dungeon_levels[i]);
   }
-  rng = Split(rng, 0);
   state.player_level = 0;
   for (auto* group :
        {&state.melee_mobs, &state.passive_mobs, &state.ranged_mobs,
@@ -321,11 +289,8 @@ void Game::FullWorld(Key rng) {
             state.mob_projectile_directions.end(), Pos{1, 1});
   std::fill(state.player_projectile_directions.begin(),
             state.player_projectile_directions.end(), Pos{1, 1});
-  const Key potion = Split(TakeKey(&rng), 1);
   std::iota(state.potion_mapping.begin(), state.potion_mapping.end(), 0);
-  std::stable_sort(
-      state.potion_mapping.begin(), state.potion_mapping.end(),
-      [&](int a, int b) { return Bits(potion, a) < Bits(potion, b); });
+  rng_.Shuffle(&state.potion_mapping);
   if (params.god_mode) {
     auto& inv = state.inventory;
     for (int* item : {&inv.wood, &inv.stone, &inv.coal, &inv.iron, &inv.diamond,
@@ -340,7 +305,6 @@ void Game::FullWorld(Key rng) {
   }
   state.monsters_killed[0] = 10;
   state.boss_timesteps_to_spawn_this_round = full::BOSS_FIGHT_SPAWN_TURNS;
-  state.state_rng = TakeKey(&rng);
 }
 
 }  // namespace craftax

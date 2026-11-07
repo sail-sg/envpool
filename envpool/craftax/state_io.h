@@ -174,7 +174,7 @@ void VisitState(Game* game, Visitor visit) {
   CRAFTAX_ARRAY(growing_plants_mask);
   CRAFTAX_SCALAR(light_level);
   CRAFTAX_ARRAY(achievements);
-  CRAFTAX_ARRAY(state_rng);
+  array("state_rng", &s.render_seed);
   CRAFTAX_SCALAR(timestep);
 #undef CRAFTAX_SCALAR
 #undef CRAFTAX_ARRAY

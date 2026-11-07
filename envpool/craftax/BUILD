@@ -37,7 +37,6 @@ cc_library(
     hdrs = [
         "game.h",
         "noise.h",
-        "random.h",
         "renderer.h",
         "state_io.h",
     ],
@@ -46,6 +45,7 @@ cc_library(
         "//conditions:default": ["-ffp-contract=off"],
     }),
     deps = [
+        "//envpool/utils:random",
         "//third_party/craftax:constants",
         "@lodepng",
     ],

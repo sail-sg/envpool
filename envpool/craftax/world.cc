@@ -23,26 +23,19 @@
 
 namespace craftax {
 
-void Game::ClassicWorld(Key rng) {
+void Game::ClassicWorld() {
   namespace b = classic::block;
   const int h = params.height;
   const int w = params.width;
-  auto water = Noise(TakeKey(&rng), h, w, h / 16, w / 16,
-                     params.fractal_noise_angles[0]);
-  TakeKey(&rng);
-  auto mountain = Noise(TakeKey(&rng), h, w, h / 16, w / 16,
-                        params.fractal_noise_angles[1]);
+  auto water =
+      Noise(rng_, h, w, h / 16, w / 16, params.fractal_noise_angles[0]);
+  auto mountain =
+      Noise(rng_, h, w, h / 16, w / 16, params.fractal_noise_angles[1]);
   const auto paths =
-      Noise(TakeKey(&rng), h, w, h / 8, w / 2, params.fractal_noise_angles[2]);
-  TakeKey(&rng);
-  const Key coal = TakeKey(&rng);
-  const Key iron = TakeKey(&rng);
-  const Key diamond = TakeKey(&rng);
+      Noise(rng_, h, w, h / 8, w / 2, params.fractal_noise_angles[2]);
   const auto trees =
-      Noise(TakeKey(&rng), h, w, h / 4, w / 4, params.fractal_noise_angles[3]);
+      Noise(rng_, h, w, h / 4, w / 4, params.fractal_noise_angles[3]);
   state.player_position = {h / 2, w / 2};
-  std::vector<float> diamond_weights(Cells());
-  int stone_count = 0;
   for (int y = 0; y < h; ++y) {
     for (int x = 0; x < w; ++x) {
       const int i = y * w + x;
@@ -64,17 +57,16 @@ void Game::ClassicWorld(Key rng) {
       if (mountain[i] > 0.85f && water[i] > 0.4f) {
         block = b::PATH;
       }
-      if (block == b::STONE && Uniform(coal, i) < 0.04f) {
+      if (block == b::STONE && rng_.Uniform() < 0.04f) {
         block = b::COAL;
       }
-      if (block == b::STONE && Uniform(iron, i) < 0.03f) {
+      if (block == b::STONE && rng_.Uniform() < 0.03f) {
         block = b::IRON;
       }
-      if (block == b::STONE && mountain[i] > 0.8f &&
-          Uniform(diamond, i) < 0.005f) {
+      if (block == b::STONE && mountain[i] > 0.8f && rng_.Uniform() < 0.005f) {
         block = b::DIAMOND;
       }
-      if (block == b::GRASS && trees[i] > 0.5f && Uniform(rng, i) > 0.8f) {
+      if (block == b::GRASS && trees[i] > 0.5f && rng_.Uniform() > 0.8f) {
         block = b::TREE;
       }
       if (mountain[i] > 0.85f && trees[i] > 0.7f) {
@@ -84,16 +76,13 @@ void Game::ClassicWorld(Key rng) {
         block = b::GRASS;
       }
       state.map[i] = block;
-      diamond_weights[i] = static_cast<float>(block == b::STONE);
-      stone_count += static_cast<int>(block == b::STONE);
     }
   }
-  for (auto& weight : diamond_weights) {
-    weight /= static_cast<float>(stone_count);
-  }
-  const int chosen = Choice(TakeKey(&rng), diamond_weights);
-  SetBlock({chosen / h, chosen % h},
-           params.always_diamond ? b::DIAMOND : b::STONE);
+  const int chosen = SampleCell(
+      rng_, Cells(), [&](int cell) { return state.map[cell] == b::STONE; });
+  // The upstream empty-candidate fallback is the first cell.
+  state.map[std::max(0, chosen)] =
+      params.always_diamond ? b::DIAMOND : b::STONE;
   for (auto& mob : state.melee_mobs) {
     mob.health = 1;
   }
@@ -102,7 +91,6 @@ void Game::ClassicWorld(Key rng) {
   }
   std::fill(state.mob_projectile_directions.begin(),
             state.mob_projectile_directions.end(), Pos{1, 1});
-  state.state_rng = TakeKey(&rng);
 }
 
 }  // namespace craftax

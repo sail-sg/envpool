@@ -69,7 +69,7 @@ void Game::ClassicCraft(int action) {
   }
 }
 
-void Game::ClassicDo(Key rng, int action) {
+void Game::ClassicDo(int action) {
   if (action != a::DO) {
     return;
   }
@@ -132,7 +132,7 @@ void Game::ClassicDo(Key rng, int action) {
       state.achievements[mining_achievements[i]] = 1u;
     }
   }
-  if (block == b::GRASS && Uniform(TakeKey(&rng)) < 0.1f) {
+  if (block == b::GRASS && rng_.Uniform() < 0.1f) {
     ++inv.sapling;
     state.achievements[c::COLLECT_SAPLING] = 1u;
   }
@@ -216,28 +216,12 @@ void Game::MoveMob(Mob* mob, Pos proposed, int cooldown) {
   mob->attack_cooldown = cooldown;
 }
 
-void Game::ClassicMobs(Key rng) {
-  auto toward = [&](Pos pos, Key key) {
-    const Pos delta = state.player_position - pos;
-    const int y = std::abs(delta.y);
-    const int x = std::abs(delta.x);
-    const auto total = static_cast<float>(y + x);
-    const int axis =
-        std::min(1, Choice(key, {static_cast<float>(y >= x) / total,
-                                 static_cast<float>(x >= y) / total}));
-    return axis == 0 ? Pos{(delta.y > 0) - (delta.y < 0), 0}
-                     : Pos{0, (delta.x > 0) - (delta.x < 0)};
-  };
-  TakeKey(&rng);
+void Game::ClassicMobs() {
   for (auto& mob : state.melee_mobs) {
-    const Pos random = mob.position + Direction(RandInt(TakeKey(&rng), 1, 5));
-    const Pos chase = mob.position + toward(mob.position, TakeKey(&rng));
     const int distance = Distance(mob.position, state.player_position);
-    const float chase_draw = Uniform(TakeKey(&rng));
-    const bool close = distance < 10 && chase_draw < 0.75f;
-    // Every split is evaluated by the oracle even when the condition is false.
-    // Do not short-circuit key advancement with a C++ boolean expression.
-    Pos proposed = close ? chase : random;
+    const bool chase = distance < 10 && rng_.Uniform() < 0.75f;
+    Pos proposed = mob.position + (chase ? TowardPlayer(mob.position)
+                                         : Direction(1 + rng_.Integer(4)));
     const bool attack = distance == 1 && mob.attack_cooldown <= 0 && mob.mask;
     if (attack) {
       proposed = mob.position;
@@ -246,24 +230,21 @@ void Game::ClassicMobs(Key rng) {
       state.is_sleeping = false;
     }
     const int cooldown = attack ? 5 : mob.attack_cooldown - 1;
-    rng = TakeKey(&rng);
     MoveMob(&mob, proposed, cooldown);
   }
-  TakeKey(&rng);
   for (auto& mob : state.passive_mobs) {
-    const Pos proposed = mob.position + Direction(RandInt(TakeKey(&rng), 1, 9));
+    const Pos proposed = mob.position + Direction(1 + rng_.Integer(8));
     MoveMob(&mob, proposed, mob.attack_cooldown);
   }
-  TakeKey(&rng);
   for (auto& mob : state.ranged_mobs) {
-    const Pos random = mob.position + Direction(RandInt(TakeKey(&rng), 1, 5));
-    const Pos direction = toward(mob.position, TakeKey(&rng));
+    const Pos random = mob.position + Direction(1 + rng_.Integer(4));
+    const Pos direction = TowardPlayer(mob.position);
     const int distance = Distance(mob.position, state.player_position);
     Pos proposed = distance >= 10 ? mob.position + direction : random;
     if (distance <= 3) {
       proposed = mob.position - direction;
     }
-    if (Uniform(TakeKey(&rng)) <= 0.85f) {
+    if (rng_.Uniform() <= 0.85f) {
       proposed = random;
     }
     const bool attack = ((distance >= 4 && distance <= 5) ||
@@ -282,7 +263,6 @@ void Game::ClassicMobs(Key rng) {
     }
     MoveMob(&mob, proposed, attack ? 4 : mob.attack_cooldown - 1);
   }
-  TakeKey(&rng);
   for (int i = 0; i < params.max_mob_projectiles; ++i) {
     auto& mob = state.mob_projectiles[i];
     const Pos proposed = mob.position + state.mob_projectile_directions[i];
@@ -302,53 +282,42 @@ void Game::ClassicMobs(Key rng) {
   }
 }
 
-void Game::ClassicSpawn(Key rng) {
-  auto spawn = [&](std::vector<Mob>* mobs, float chance, int kind, int health) {
-    const float draw = Uniform(TakeKey(&rng));
-    std::vector<float> weights(Cells());
-    int count = 0;
-    for (int y = 0; y < params.height; ++y) {
-      for (int x = 0; x < params.width; ++x) {
-        const Pos pos{y, x};
-        const int distance = Distance(pos, state.player_position);
-        const int block = Block(pos);
-        const bool terrain =
-            (kind < 2 && block == b::GRASS) || (kind > 0 && block == b::PATH);
-        const bool valid = terrain && distance > (kind == 0 ? 3 : 9) &&
-                           distance < params.mob_despawn_distance &&
-                           !state.mob_map[Index(pos)];
-        weights[y * params.width + x] = valid;
-        count += valid;
-      }
+void Game::ClassicSpawn() {
+  auto spawn = [&](std::vector<Mob>& mobs, float chance, int kind, int health) {
+    auto slot = std::find_if(mobs.begin(), mobs.end(),
+                             [](const Mob& mob) { return !mob.mask; });
+    if (slot == mobs.end()) {
+      SetMob(mobs.front().position, true);
+      return;
     }
-    for (auto& w : weights) {
-      w /= static_cast<float>(count);
+    const int min_distance = kind == 0 ? 3 : 9;
+    if (params.mob_despawn_distance <= min_distance + 1 ||
+        rng_.Uniform() >= chance) {
+      return;
     }
-    const int position = Choice(TakeKey(&rng), weights);
-    int slot = 0;
-    bool has_slot = false;
-    for (int i = 0; i < static_cast<int>(mobs->size()); ++i) {
-      if (!(*mobs)[i].mask) {
-        slot = i;
-        has_slot = true;
-        break;
-      }
+    const int position = SampleCell(rng_, Cells(), [&](int cell) {
+      const Pos pos{cell / params.width, cell % params.width};
+      const int block = state.map[cell];
+      const bool terrain =
+          (kind < 2 && block == b::GRASS) || (kind > 0 && block == b::PATH);
+      const int distance = Distance(pos, state.player_position);
+      return terrain && distance > min_distance &&
+             distance < params.mob_despawn_distance && !state.mob_map[cell];
+    });
+    if (position >= 0) {
+      slot->position = {position / params.width, position % params.width};
+      slot->health = static_cast<float>(health);
+      slot->mask = true;
+      SetMob(slot->position, true);
     }
-    auto& mob = (*mobs)[slot];
-    if (count > 0 && draw < chance && has_slot) {
-      mob.position = {position / params.height, position % params.width};
-      mob.health = static_cast<float>(health);
-      mob.mask = true;
-    }
-    SetMob(mob.position, state.mob_map[Index(mob.position)] || mob.mask);
   };
-  spawn(&state.passive_mobs, params.spawn_cow_chance, 0, params.cow_health);
+  spawn(state.passive_mobs, params.spawn_cow_chance, 0, params.cow_health);
   const float night = 1.0f - state.light_level;
-  spawn(&state.melee_mobs,
+  spawn(state.melee_mobs,
         params.spawn_zombie_base_chance +
             params.spawn_zombie_night_chance * night * night,
         1, params.zombie_health);
-  spawn(&state.ranged_mobs, params.spawn_skeleton_chance, 2,
+  spawn(state.ranged_mobs, params.spawn_skeleton_chance, 2,
         params.skeleton_health);
 }
 
@@ -404,18 +373,18 @@ void Game::Plants() {
   }
 }
 
-float Game::ClassicStep(Key rng, int action) {
+float Game::ClassicStep(int action) {
   const auto achievements = state.achievements;
   const float health = state.player_health;
   if (state.is_sleeping) {
     action = a::NOOP;
   }
   ClassicCraft(action);
-  ClassicDo(TakeKey(&rng), action);
+  ClassicDo(action);
   ClassicPlace(action);
   ClassicMove(action);
-  ClassicMobs(TakeKey(&rng));
-  ClassicSpawn(TakeKey(&rng));
+  ClassicMobs();
+  ClassicSpawn();
   Plants();
   ClassicIntrinsics(action);
   auto& inv = state.inventory;
@@ -437,7 +406,6 @@ float Game::ClassicStep(Key rng, int action) {
       std::fma(state.player_health - health, 0.1f, static_cast<float>(earned));
   ++state.timestep;
   state.light_level = Light(state.timestep);
-  state.state_rng = TakeKey(&rng);
   return reward;
 }
 

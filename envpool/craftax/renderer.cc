@@ -20,6 +20,8 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <optional>
+#include <random>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -374,6 +376,12 @@ std::vector<float> Pixels(const Game& game, int tile) {
   }
   const float daylight = !classic && s.player_level != 0 ? 1.0f : s.light_level;
   const float intensity = std::max(2.0f * (0.5f - daylight), 0.0f);
+  std::optional<std::mt19937> night_rng;
+  if (intensity > 0.0f) {
+    std::seed_seq seed(s.render_seed.begin(), s.render_seed.end());
+    night_rng.emplace(seed);
+  }
+  std::uniform_real_distribution<float> night_noise(32.0f, 127.0f);
   constexpr std::array<float, 3> blue{0, 16, 64};
   for (int y = 0; y < mh; ++y) {
     for (int x = 0; x < w; ++x) {
@@ -386,7 +394,7 @@ std::vector<float> Pixels(const Game& game, int tile) {
       float* pixel = pixels.data() + index * 3;
       std::array<float, 3> night;
       const float mask = intensity * textures.night[index];
-      const float noise = std::fma(Uniform(s.state_rng, index), 95.0f, 32.0f);
+      const float noise = night_rng ? night_noise(*night_rng) : 0.0f;
       for (int c = 0; c < 3; ++c) {
         pixel[c] *= light;
         night[c] = std::fma(mask, noise, (1.0f - mask) * pixel[c]);

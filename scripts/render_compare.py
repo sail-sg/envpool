@@ -90,11 +90,14 @@ def _make_craftax_family() -> RenderFamily:
     """Build the Craftax comparison adapter using actual gameplay frames."""
     import envpool.craftax.registration  # noqa: F401
     from envpool.craftax.oracle import (
+        assert_pixels,
         encode,
         jax,
         make_oracle,
-        native,
         renderer,
+        rollout_action,
+        state_layout,
+        sync_world,
     )
     from envpool.registration import make_gymnasium
 
@@ -108,38 +111,47 @@ def _make_craftax_family() -> RenderFamily:
         scene: str, cfg: RenderCompareConfig
     ) -> tuple[np.ndarray, np.ndarray]:
         classic, level, length = scenes[scene]
-        task = (
-            "Craftax-"
-            + ("Classic-" if classic else "")
-            + "Symbolic-AutoReset-v1"
-        )
+        task = "Craftax-" + ("Classic-" if classic else "") + "Symbolic-v1"
         oracle, params = make_oracle(task)
-        key = jax.random.PRNGKey(cfg.seed)
+        params = params.replace(mob_despawn_distance=1)
+        key = jax.random.PRNGKey(cfg.seed + 1000)
         _, state = oracle.reset(key, params)
-        kwargs = {}
+        layout = state_layout(state, classic)
+        kwargs: dict[str, Any] = {}
         if level:
             state = state.replace(
                 player_level=jax.numpy.asarray(level, dtype=jax.numpy.int32),
                 player_position=state.up_ladders[level],
             )
-            layout = native.Game(native.Params(classic)).get_state()
             kwargs["initial_state"] = encode(state, layout).tolist()
         pool = make_gymnasium(
-            task, num_envs=1, seed=cfg.seed, render_mode="rgb_array", **kwargs
+            task,
+            num_envs=1,
+            seed=cfg.seed,
+            render_mode="rgb_array",
+            mob_despawn_distance=1,
+            debug_state=True,
+            **kwargs,
         )
-        step = jax.jit(oracle.step)
+        step = jax.jit(oracle.step_env)
         rng = np.random.default_rng(40)
         try:
-            pool.reset()
+            _, info = pool.reset()
+            if not level:
+                state = sync_world(
+                    state, info["state"][0], layout, classic, params
+                )
             for _ in range(length):
                 key, draw = jax.random.split(key)
-                action = int(rng.integers(17 if classic else 43))
+                action = rollout_action(
+                    state, int(rng.integers(17 if classic else 43)), classic
+                )
                 _, state, _, _, _ = step(draw, state, action, params)
                 pool.step(np.array([action], np.int32))
             actual = np.asarray(pool.render())[0]
-            expected = np.asarray(renderer(classic)(state)).astype(np.uint8)
-            np.testing.assert_array_equal(actual, expected)
-            return actual, expected
+            expected = np.asarray(renderer(classic)(state))
+            assert_pixels(actual, expected, scene)
+            return actual, expected.astype(np.uint8)
         finally:
             pool.close()
 

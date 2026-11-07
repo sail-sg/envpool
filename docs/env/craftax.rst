@@ -45,7 +45,8 @@ All observations are ``float32``. Pixel observations use the official
 normalization to ``[0, 1]`` and include the inventory display. Symbolic
 observations contain the local map, entities, inventory, and player status.
 The declared symbolic bounds follow upstream; some equipment and status
-features can exceed one during play.
+features can exceed one during play. Only visible, active entities contribute
+to the symbolic view.
 
 Each name also has the official ``-AutoReset-v1`` variant, for example
 ``Craftax-Symbolic-AutoReset-v1``. Every name has a ``Craftax/`` alias:
@@ -112,18 +113,15 @@ and 48 for full Craftax's eight-room dungeon generator. The number of floors
 is fixed at one and nine respectively. Noise overrides are four flattened
 arrays in upstream order; an empty array selects random angles for that layer.
 
-Random draws use a native Threefry2x32 implementation with the pinned JAX
-partitionable counter layout. Each environment starts with
-``PRNGKey(seed + env_id)`` (or its explicit ``env_seed``). The first reset uses
-that key directly. Each following step splits the stream, keeps the left key,
-and uses the right key for the step or the next-step reset. The AutoReset
-wrapper further splits its step key into the official step and reset keys.
-Identical seeds and external actions therefore reproduce whole episodes,
-independently of thread count.
+Craftax uses EnvPool's native random-number generator. Each environment
+starts its own stream from ``seed + env_id`` or its explicit ``env_seed``.
+Resets and steps advance that stream. On the same EnvPool build and
+platform, recreating the pool with the same configuration and seed and
+replaying the same actions reproduces the rollout across thread counts.
 
-Full Craftax's symbolic reset splits its input key once more than pixel
-reset, matching the official implementation. Consequently, the two observation
-variants can generate different worlds from the same external seed.
+Seeds from versions that used JAX-compatible sampling produce different
+worlds and trajectories with the native generator. Keep the original EnvPool
+version when replaying a trajectory from one of those versions.
 
 Rendering
 ---------
@@ -162,11 +160,22 @@ projectiles, potion and enchantment actions, plants, boss waves, and victory.
 The official texture cache is a test-only build artifact and is never shipped
 as a runtime dependency.
 
-Directed tests inject state only once, before the first external action.
-The ``initial_state`` configuration supports the same reset-only exchange
-through the actual pool; ``debug_state=True`` exposes its diagnostic encoding
-in ``info["state"]``. Neither option provides a mid-episode synchronization
-path. The diagnostic encoding is not a stable saved-game format.
+Native tests check default seed variation and replay across resets and
+parallel slots. They also check the generated floors, potion assignments,
+and the rates and legal outcomes of native spawns, movement, and loot.
+Oracle rollouts start from the native world after checking the generated
+terrain, ladders, lighting, and items. Both implementations step the same
+actions independently through episode end, with random spawns and loot
+covered in separate tests. Directed fixtures exercise combat and specific
+actions from a known initial state, including Classic's activation of
+positive-health mob slots during interaction. In the chest fixtures, the
+tests compare the opening, guaranteed rewards, and transition outputs
+before copying the separately checked random loot for the rest of the rollout.
+
+The ``initial_state`` configuration accepts a diagnostic snapshot for the
+first reset. Use ``debug_state=True`` to expose that encoding in
+``info["state"]``. The encoding is intended for diagnostics and may change
+between versions.
 
 Scalar native math and the official JAX graphs may round daylight blends,
 normalized observations, and the achievement score differently. Oracle tests
@@ -176,7 +185,8 @@ level for quantization. These criteria apply across architectures and channels.
 
 Game state is compared by field: discrete maps, inventory, achievements, and
 transitions remain exact; floating-point fields use the numerical criterion
-above. Tests cover complete day/night and AutoReset trajectories to catch
-changed random events or growing state drift. Repeated native runs retain exact
-state and observation equality. Runtime observations read the current state;
-they do not rewrite it to imitate JAX compilation or constant folding.
+above. Tests cover complete day/night and AutoReset trajectories. At night
+the oracle bounds the scene and lighting using the endpoints of its pixel
+noise distribution. Native tests check the noise distribution and exact
+same-state render replay. Repeated native runs retain exact state and
+observation equality.

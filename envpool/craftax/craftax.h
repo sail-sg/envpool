@@ -62,7 +62,6 @@ struct CraftaxEnvFns {
   template <typename Config>
   static Params Parameters(const Config& conf) {
     Params params(Classic);
-    params.symbolic = !Pixel;
     const auto& size = conf["map_size"_];
     if (size.size() != 2) {
       throw std::invalid_argument("map_size must contain height and width");
@@ -150,15 +149,15 @@ class CraftaxEnv : public Env<EnvSpec<CraftaxEnvFns<Classic, Pixel>>>,
 
   CraftaxEnv(const Spec& spec, int env_id)
       : Base(spec, env_id),
-        game_(CraftaxEnvFns<Classic, Pixel>::Parameters(spec.config)),
-        rng_{0, static_cast<std::uint32_t>(this->seed_)},
+        game_(CraftaxEnvFns<Classic, Pixel>::Parameters(spec.config),
+              this->seed_),
         auto_reset_(spec.config["auto_reset"_]),
         tile_(spec.config["render_tile_size"_]) {}
 
   bool IsDone() override { return needs_reset_; }
 
   void Reset() override {
-    game_.Reset(first_reset_ ? rng_ : TakeKey(&rng_));
+    game_.Reset();
     // The only state injection occurs at the first reset. Subsequent episodes
     // and every step use native dynamics without further synchronization.
     const bool synchronized =
@@ -172,9 +171,7 @@ class CraftaxEnv : public Env<EnvSpec<CraftaxEnvFns<Classic, Pixel>>>,
   }
 
   void Step(const Action& action) override {
-    const Key key = TakeKey(&rng_);
-    const float reward =
-        game_.Step(auto_reset_ ? Split(key, 0) : key, action["action"_]);
+    const float reward = game_.Step(action["action"_]);
     const bool done = game_.Done();
     const bool terminal =
         game_.state.player_health <= 0 ||
@@ -186,7 +183,7 @@ class CraftaxEnv : public Env<EnvSpec<CraftaxEnvFns<Classic, Pixel>>>,
     const int elapsed = game_.state.timestep;
     const auto achievements = game_.state.achievements;
     if (done && auto_reset_) {
-      game_.Reset(Split(key, 1));
+      game_.Reset();
     }
     needs_reset_ = done && !auto_reset_;
     WriteState(reward, done, trunc, false, elapsed, achievements);
@@ -223,7 +220,6 @@ class CraftaxEnv : public Env<EnvSpec<CraftaxEnvFns<Classic, Pixel>>>,
 
  private:
   Game game_;
-  Key rng_;
   bool auto_reset_, first_reset_{true}, needs_reset_{true};
   int tile_;
 
