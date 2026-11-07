@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+from itertools import permutations
 from typing import Any
 from unittest.mock import patch
 
@@ -147,11 +148,12 @@ def _pick_legal(mask: np.ndarray, step: int) -> int:
     return int(actions[(step * 5 + 1) % actions.size])
 
 
-def _assert_uniform_counts(counts: np.ndarray, samples: int) -> None:
-    probability = 1 / counts.size
-    mean = samples * probability
-    np.testing.assert_allclose(
-        counts, mean, rtol=0, atol=6 * np.sqrt(mean * (1 - probability))
+def _assert_sample_counts(
+    counts: np.ndarray, samples: int, probability: float | np.ndarray
+) -> None:
+    expected = samples * probability
+    np.testing.assert_array_less(
+        np.abs(counts - expected), 6 * np.sqrt(expected * (1 - probability))
     )
 
 
@@ -408,6 +410,30 @@ class PgxBoardGameAlignTest(absltest.TestCase):
         """Verify the oracle package stays pinned to the expected version."""
         super().setUp()
         self.assertEqual(pgx.__version__, _PGX_VERSION)
+
+    def test_opening_player_sampling(self) -> None:
+        """Both players should open equally often across native streams."""
+        count = 512
+        task_ids = (
+            *(case[0] for case in _PUBLIC_CASES),
+            *(case[0] for case in _BOARD_GAME_CASES),
+            "AnimalShogi-v1",
+            "GardnerChess-v1",
+            "Chess-v1",
+            "Shogi-v1",
+        )
+        for task_id in task_ids:
+            with self.subTest(task_id=task_id):
+                env = make_gymnasium(
+                    task_id, num_envs=count, num_threads=2, seed=0
+                )
+                try:
+                    _, info = env.reset()
+                    counts = np.bincount(info["current_player"], minlength=2)
+                    self.assertEqual(counts.shape, (2,))
+                    _assert_sample_counts(counts, count, 0.5)
+                finally:
+                    env.close()
 
     def _assert_state_matches(
         self,
@@ -717,6 +743,40 @@ class PgxCardGameAlignTest(absltest.TestCase):
                     oracle_state = oracle.step(oracle_state, jnp.int32(action))
                     self._assert_step_matches(oracle, oracle_state, env_step)
                 self.assertTrue(bool(np.asarray(oracle_state.terminated)))
+
+    def test_deal_sampling(self) -> None:
+        """Native deals follow the deck odds independently of who opens."""
+        count = 2048
+        cases = (
+            ("KuhnPoker-v1", (0, 1, 2), 2),
+            ("LeducHoldem-v1", (0, 0, 1, 1, 2, 2), 3),
+        )
+        for task_id, deck, deal_size in cases:
+            with self.subTest(task_id=task_id):
+                # Count distinct physical deals even when cards share a rank.
+                shape = (3,) * deal_size
+                deals = np.asarray(list(permutations(deck, deal_size)))
+                deal_indices = np.ravel_multi_index(tuple(deals.T), shape)
+                multiplicities = np.bincount(
+                    deal_indices, minlength=3**deal_size
+                )
+                probability = np.tile(multiplicities / (2 * len(deals)), 2)
+                env = make_gymnasium(
+                    task_id, num_envs=count, num_threads=2, seed=0
+                )
+                try:
+                    _, info = env.reset()
+                    indices = np.ravel_multi_index(
+                        (info["current_player"], *info["cards"].T), (2, *shape)
+                    )
+                    counts = np.bincount(indices, minlength=probability.size)
+                    legal = probability > 0
+                    np.testing.assert_array_equal(counts[~legal], 0)
+                    _assert_sample_counts(
+                        counts[legal], count, probability[legal]
+                    )
+                finally:
+                    env.close()
 
 
 class PgxAnimalShogiAlignTest(absltest.TestCase):
@@ -1208,8 +1268,8 @@ class PgxBackgammonAlignTest(absltest.TestCase):
                 info["current_player"] * 36 + opening[:, 0] * 6 + opening[:, 1],
                 minlength=72,
             ).reshape(2, 6, 6)
-            _assert_uniform_counts(
-                opening_counts[:, ~np.eye(6, dtype=bool)], count
+            _assert_sample_counts(
+                opening_counts[:, ~np.eye(6, dtype=bool)], count, 1 / 60
             )
 
             pending = np.ones(count, dtype=bool)
@@ -1227,8 +1287,10 @@ class PgxBackgammonAlignTest(absltest.TestCase):
                 pending[ids[changed]] = False
             self.assertFalse(np.any(pending))
             self.assertTrue(np.all((rolls >= 0) & (rolls < 6)))
-            _assert_uniform_counts(
-                np.bincount(rolls[:, 0] * 6 + rolls[:, 1], minlength=36), count
+            _assert_sample_counts(
+                np.bincount(rolls[:, 0] * 6 + rolls[:, 1], minlength=36),
+                count,
+                1 / 36,
             )
         finally:
             env.close()
@@ -1461,7 +1523,14 @@ class PgxPlay2048AlignTest(absltest.TestCase):
             boards = info["board"].reshape(count, 16)
             self.assertTrue(np.isin(boards, (0, 1, 2)).all())
             np.testing.assert_array_equal(np.count_nonzero(boards, axis=1), 2)
-            _assert_uniform_counts(np.count_nonzero(boards, axis=0), 2 * count)
+            # Reset and step use the same spawn routine. Each reset fills two
+            # distinct cells and the tile value is independent of its position.
+            _assert_sample_counts(
+                np.count_nonzero(boards, axis=0), count, 1 / 8
+            )
+            _assert_sample_counts(
+                np.count_nonzero(boards == 2, axis=0), count, 0.1 / 8
+            )
             self.assertAlmostEqual(
                 np.count_nonzero(boards == 2) / (2 * count),
                 0.1,
