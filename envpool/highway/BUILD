@@ -19,17 +19,10 @@ load("//envpool:requirements.bzl", "requirement")
 
 package(default_visibility = ["//visibility:public"])
 
-# NumPy rounds the separate multiply and add operations in the official dynamics.
-_NATIVE_COPTS = select({
-    "//:windows": ["/fp:strict"],
-    "//conditions:default": ["-ffp-contract=off"],
-})
-
 cc_library(
     name = "highway_env",
     srcs = ["highway_env.cc"],
     hdrs = ["highway_env.h"],
-    copts = _NATIVE_COPTS,
     deps = [
         "//envpool/core:async_envpool",
     ],
@@ -39,14 +32,12 @@ cc_library(
     name = "official_lane",
     srcs = ["official_lane.cc"],
     hdrs = ["official_lane.h"],
-    copts = _NATIVE_COPTS,
 )
 
 cc_library(
     name = "official_road",
     srcs = ["official_road.cc"],
     hdrs = ["official_road.h"],
-    copts = _NATIVE_COPTS,
     deps = [
         ":official_lane",
     ],
@@ -56,7 +47,6 @@ cc_library(
     name = "official_vehicle",
     srcs = ["official_vehicle.cc"],
     hdrs = ["official_vehicle.h"],
-    copts = _NATIVE_COPTS,
     deps = [
         ":official_lane",
         ":official_road",
@@ -67,7 +57,6 @@ cc_library(
     name = "official_scene",
     srcs = ["official_scene.cc"],
     hdrs = ["official_scene.h"],
-    copts = _NATIVE_COPTS,
     deps = [
         ":official_lane",
         ":official_road",
@@ -79,7 +68,6 @@ cc_library(
     name = "official_observation",
     srcs = ["official_observation.cc"],
     hdrs = ["official_observation.h"],
-    copts = _NATIVE_COPTS,
     deps = [
         ":official_scene",
     ],
@@ -89,7 +77,6 @@ cc_library(
     name = "official_task",
     srcs = ["official_task.cc"],
     hdrs = ["official_task.h"],
-    copts = _NATIVE_COPTS,
     deps = [
         ":official_lane",
         ":official_scene",
@@ -102,7 +89,6 @@ pybind_extension(
         "highway_envpool.cc",
         "native_task_env.h",
     ],
-    copts = _NATIVE_COPTS,
     deps = [
         ":highway_env",
         ":official_observation",

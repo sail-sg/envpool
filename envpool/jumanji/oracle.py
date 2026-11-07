@@ -148,13 +148,6 @@ def _minesweeper_flat_mines(official_state: Any) -> set[int]:
     return set(map(int, locations.astype(np.int64).reshape(-1)))
 
 
-def _distance_matrix(official_state: Any) -> str:
-    coordinates = _as_numpy(official_state.coordinates).astype(np.float32)
-    deltas = coordinates[:, None, :] - coordinates[None, :, :]
-    distances = np.sqrt(np.sum(deltas * deltas, axis=-1, dtype=np.float32))
-    return _csv_flat(distances.astype(np.float32, copy=False))
-
-
 def _envpool_kwargs_from_official_state(
     task_id: str, official_state: Any, official_observation: Any
 ) -> dict[str, Any]:
@@ -169,10 +162,8 @@ def _envpool_kwargs_from_official_state(
         }
     if task_id == "CVRP-v1":
         return {
-            "cvrp_max_capacity": int(_as_numpy(official_state.capacity)),
             "cvrp_coordinates": _csv_flat(official_state.coordinates),
             "cvrp_demands": _csv_flat(official_observation.demands),
-            "cvrp_distance_matrix": _distance_matrix(official_state),
         }
     if task_id == "Cleaner-v0":
         return {
@@ -186,9 +177,6 @@ def _envpool_kwargs_from_official_state(
     if task_id == "FlatPack-v0":
         return {
             "flat_pack_blocks": _csv_flat_int(official_observation.blocks),
-            "flat_pack_action_mask": _csv_flat_int(
-                official_observation.action_mask
-            ),
         }
     if task_id == "Game2048-v1":
         return {"game2048_initial_board": _csv_flat_int(official_state.board)}
@@ -212,9 +200,6 @@ def _envpool_kwargs_from_official_state(
             ),
             "job_shop_machines_remaining_times": _csv_flat_int(
                 official_observation.machines_remaining_times
-            ),
-            "job_shop_action_mask": _csv_flat_int(
-                official_observation.action_mask
             ),
         }
     if task_id == "Knapsack-v1":
@@ -252,7 +237,6 @@ def _envpool_kwargs_from_official_state(
             "mmst_node_types": _csv_flat_int(official_observation.node_types),
             "mmst_adj_matrix": _csv_flat_int(official_observation.adj_matrix),
             "mmst_positions": _csv_flat_int(official_observation.positions),
-            "mmst_action_mask": _csv_flat_int(official_observation.action_mask),
         }
     if task_id == "MultiCVRP-v0":
         return {
@@ -280,9 +264,6 @@ def _envpool_kwargs_from_official_state(
             "multi_cvrp_vehicle_capacities": _csv_flat_int(
                 official_observation.vehicles.capacities
             ),
-            "multi_cvrp_action_mask": _csv_flat_int(
-                official_observation.action_mask
-            ),
         }
     if task_id == "PacMan-v1":
         return {
@@ -299,9 +280,6 @@ def _envpool_kwargs_from_official_state(
             "pacman_power_up_locations": _csv_flat_int(
                 official_observation.power_up_locations
             ),
-            "pacman_action_mask": _csv_flat_int(
-                official_observation.action_mask
-            ),
             "pacman_frightened_state_time": int(
                 _as_numpy(official_observation.frightened_state_time)
             ),
@@ -309,12 +287,6 @@ def _envpool_kwargs_from_official_state(
         }
     if task_id == "RobotWarehouse-v0":
         return {
-            "robot_warehouse_agents_view": _csv_flat_int(
-                official_observation.agents_view
-            ),
-            "robot_warehouse_action_mask": _csv_flat_int(
-                official_observation.action_mask
-            ),
             "robot_warehouse_initial_agent_x": _csv_flat_int(
                 official_state.agents.position.x
             ),
@@ -381,7 +353,6 @@ def _envpool_kwargs_from_official_state(
     if task_id == "TSP-v1":
         return {
             "tsp_coordinates": _csv_flat(official_state.coordinates),
-            "tsp_distance_matrix": _distance_matrix(official_state),
         }
     if task_id == "Tetris-v0":
         return {
@@ -389,9 +360,6 @@ def _envpool_kwargs_from_official_state(
                 _as_numpy(official_state.grid_padded)[:10, :10]
             ),
             "tetris_tetromino": _csv_flat_int(official_state.new_tetromino),
-            "tetris_action_mask": _csv_flat_int(
-                official_observation.action_mask
-            ),
         }
     return {}
 

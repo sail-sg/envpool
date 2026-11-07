@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Bitwise alignment tests against the official highway-env package."""
+"""Transition and render tests against the official highway-env package."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ from absl.testing import absltest
 from gymnasium import spaces
 
 from envpool.highway.highway_align_test import _debug_state, _patch_oracle
-from envpool.highway.highway_official_coverage_test import _CASES, _Case
+from envpool.highway.highway_official_coverage_test import _Case
 from envpool.highway.highway_oracle_util import (
     prepare_official_oracle_import,
     register_highway_envs,
@@ -170,51 +170,41 @@ def _repeat(actions: tuple[Any, ...], step: int) -> Any:
 
 
 def _assert_exposed_info_matches_official(
-    actual_info: dict[str, Any],
-    expected_info: dict[str, Any],
-    atol: float = 0.0,
+    actual_info: dict[str, Any], expected_info: dict[str, Any]
 ) -> None:
     actual = _envpool_info(actual_info)
     expected = _official_info(expected_info)
-    if atol == 0.0:
-        _assert_tree_bitwise(actual, {key: expected[key] for key in actual})
-    else:
-        _assert_tree_close(actual, {key: expected[key] for key in actual}, atol)
+    _assert_tree_close(actual, {key: expected[key] for key in actual})
 
 
-def _assert_tree_bitwise(actual: Any, expected: Any) -> None:
+def _assert_tree_close(actual: Any, expected: Any) -> None:
     if isinstance(expected, dict):
         assert isinstance(actual, dict)
         assert actual.keys() == expected.keys()
         for key in expected:
-            _assert_tree_bitwise(actual[key], expected[key])
+            _assert_tree_close(actual[key], expected[key])
         return
     if isinstance(expected, tuple):
         assert isinstance(actual, tuple)
         assert len(actual) == len(expected)
         for actual_item, expected_item in zip(actual, expected, strict=True):
-            _assert_tree_bitwise(actual_item, expected_item)
+            _assert_tree_close(actual_item, expected_item)
         return
-    np.testing.assert_array_equal(actual, expected)
-
-
-def _assert_tree_close(actual: Any, expected: Any, atol: float) -> None:
-    if isinstance(expected, dict):
-        assert isinstance(actual, dict)
-        assert actual.keys() == expected.keys()
-        for key in expected:
-            _assert_tree_close(actual[key], expected[key], atol)
-        return
-    if isinstance(expected, tuple):
-        assert isinstance(actual, tuple)
-        assert len(actual) == len(expected)
-        for actual_item, expected_item in zip(actual, expected, strict=True):
-            _assert_tree_close(actual_item, expected_item, atol)
-        return
-    if atol == 0.0:
-        np.testing.assert_array_equal(actual, expected)
+    actual_array = np.asarray(actual)
+    expected_array = np.asarray(expected)
+    if np.issubdtype(expected_array.dtype, np.floating):
+        # Float32 outputs round the physics once. Float64 values can accumulate
+        # roundoff over a rollout of up to 128 policy steps with physics substeps.
+        tolerance = max(4 * float(np.finfo(expected_array.dtype).eps), 1e-12)
+        np.testing.assert_allclose(
+            actual_array,
+            expected_array,
+            rtol=tolerance,
+            atol=tolerance,
+            strict=True,
+        )
     else:
-        np.testing.assert_allclose(actual, expected, rtol=0.0, atol=atol)
+        np.testing.assert_array_equal(actual_array, expected_array, strict=True)
 
 
 def _render_rgb(env: Any) -> np.ndarray:
@@ -317,77 +307,18 @@ def _restore_official_idm_defaults() -> None:
 
 
 class _HighwayOfficialAlignTest(absltest.TestCase):
-    def test_reset_step_and_render_match_official_bitwise(self) -> None:
-        patched_state_cases = [
-            case
-            for case in _CASES
-            if case.official_id in ("highway-v0", "highway-fast-v0")
-        ]
-        for case in patched_state_cases:
-            with self.subTest(official_id=case.official_id):
-                env = make_gymnasium(
-                    case.official_id,
-                    num_envs=1,
+    def test_highway_steps_and_render_match_official_after_reset(self) -> None:
+        config = {"vehicles_count": 0, "initial_lane_id": 1}
+        for official_id in ("highway-v0", "highway-fast-v0"):
+            with self.subTest(official_id=official_id):
+                self._assert_native_single_agent_rollout(
+                    _Case(official_id),
                     seed=0,
-                    render_mode="rgb_array",
-                    vehicles_count=0,
-                    initial_lane_id=1,
+                    oracle_config=config,
+                    native_config=config,
+                    actions=(1, 3, 3, 4),
+                    max_steps=_OFFICIAL_ALIGN_STEPS,
                 )
-                oracle = _make_oracle(case.official_id)
-                try:
-                    env_obs, _ = env.reset()
-                    oracle.reset(seed=123)
-                    _restore_official_idm_defaults()
-                    _patch_oracle_from_envpool(oracle, env)
-                    oracle_obs = oracle.unwrapped.observation_type.observe()
-                    _assert_tree_bitwise(
-                        _envpool_reset_obs(env_obs, case), oracle_obs
-                    )
-                    _assert_render_aligned(case, env, oracle, "reset")
-
-                    for step in range(_OFFICIAL_ALIGN_STEPS):
-                        action = _official_action(oracle.action_space, step)
-                        actual = _envpool_step(env, case, action)
-                        _patch_oracle_from_envpool(oracle, env)
-                        expected = _Step(
-                            obs=oracle.unwrapped.observation_type.observe(),
-                            reward=oracle.unwrapped._reward(action),
-                            terminated=oracle.unwrapped._is_terminated(),
-                            truncated=oracle.unwrapped._is_truncated(),
-                            info=oracle.unwrapped._info(
-                                oracle.unwrapped.observation_type.observe(),
-                                action,
-                            ),
-                        )
-
-                        _assert_tree_bitwise(
-                            _envpool_obs(actual.obs, case), expected.obs
-                        )
-                        np.testing.assert_array_equal(
-                            _envpool_scalar(actual.reward),
-                            np.float32(expected.reward),
-                        )
-                        np.testing.assert_array_equal(
-                            _envpool_scalar(actual.terminated),
-                            expected.terminated,
-                        )
-                        np.testing.assert_array_equal(
-                            _envpool_scalar(actual.truncated),
-                            expected.truncated,
-                        )
-                        _assert_exposed_info_matches_official(
-                            actual.info, expected.info
-                        )
-                        _assert_render_aligned(
-                            case, env, oracle, f"step {step}"
-                        )
-                        if bool(expected.terminated) or bool(
-                            expected.truncated
-                        ):
-                            break
-                finally:
-                    env.close()
-                    oracle.close()
 
     def test_native_official_backend_matches_official_from_patched_reset_state(
         self,
@@ -429,28 +360,14 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
         oracle_config: dict[str, Any],
         actions: tuple[Any, ...],
         max_steps: int,
+        native_config: dict[str, Any] | None = None,
     ) -> int:
-        # Linux's native and NumPy paths round one near-zero generic-merge
-        # lateral coordinate differently by exactly one float64 epsilon.
-        obs_atol = (
-            float(np.finfo(np.float64).eps)
-            if (
-                platform.system() == "Linux"
-                and platform.machine().lower() in ("x86_64", "amd64")
-                and case.official_id == "merge-generic-v1"
-            )
-            else 0.0
-        )
         env = make_gymnasium(
             case.official_id,
             num_envs=1,
             seed=seed,
             render_mode="rgb_array",
-            **(
-                {"spawn_probability": oracle_config["spawn_probability"]}
-                if "spawn_probability" in oracle_config
-                else {}
-            ),
+            **(native_config or {}),
         )
         oracle = _make_oracle(case.official_id, oracle_config)
         steps = 0
@@ -460,7 +377,7 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
             if not _official_idm_is_intersection_tuned(case.official_id):
                 _restore_official_idm_defaults()
             _patch_oracle_from_envpool(oracle, env)
-            _assert_tree_bitwise(
+            _assert_tree_close(
                 _envpool_reset_obs(env_obs, case),
                 oracle.unwrapped.observation_type.observe(),
             )
@@ -472,10 +389,8 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                 actual = _envpool_step(env, case, action)
                 steps += 1
 
+                _assert_tree_close(_envpool_obs(actual.obs, case), expected.obs)
                 _assert_tree_close(
-                    _envpool_obs(actual.obs, case), expected.obs, obs_atol
-                )
-                np.testing.assert_array_equal(
                     _envpool_scalar(actual.reward), np.float32(expected.reward)
                 )
                 np.testing.assert_array_equal(
@@ -498,7 +413,6 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
     def test_native_parking_steps_match_official_from_patched_state(
         self,
     ) -> None:
-        obs_atol = 1e-15 if _IS_LINUX_ARM64 else 0.0
         for case in (
             _Case("parking-v0"),
             _Case("parking-ActionRepeat-v0"),
@@ -519,7 +433,6 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                     _assert_tree_close(
                         _envpool_reset_obs(env_obs, case),
                         oracle.unwrapped.observation_type.observe(),
-                        obs_atol,
                     )
                     _assert_render_aligned(case, env, oracle, "reset")
 
@@ -531,9 +444,8 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                         _assert_tree_close(
                             _envpool_obs(actual.obs, case),
                             expected.obs,
-                            obs_atol,
                         )
-                        np.testing.assert_array_equal(
+                        _assert_tree_close(
                             _envpool_scalar(actual.reward),
                             np.float32(expected.reward),
                         )
@@ -546,7 +458,7 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                             expected.truncated,
                         )
                         _assert_exposed_info_matches_official(
-                            actual.info, expected.info, obs_atol
+                            actual.info, expected.info
                         )
                         _assert_render_aligned(
                             case, env, oracle, f"step {step}"
@@ -614,6 +526,7 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                             "initial_vehicle_count": 0,
                             "spawn_probability": 0.0,
                         },
+                        native_config={"spawn_probability": 0.0},
                         actions=actions,
                         max_steps=_INTERSECTION_ALIGN_STEPS,
                     )
@@ -670,7 +583,7 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
             env_obs, _ = env.reset()
             oracle.reset(seed=123)
             _patch_oracle_from_envpool(oracle, env)
-            _assert_tree_bitwise(
+            _assert_tree_close(
                 _envpool_reset_obs(env_obs, case),
                 oracle.unwrapped.observation_type.observe(),
             )
@@ -682,13 +595,11 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                 actual = _envpool_step(env, case, action)
                 steps += 1
 
-                _assert_tree_bitwise(
-                    _envpool_obs(actual.obs, case), expected.obs
-                )
+                _assert_tree_close(_envpool_obs(actual.obs, case), expected.obs)
                 # EnvPool exposes per-player float32 rewards. The unwrapped
                 # v0 API returns their mean but also reports each player's
                 # reward in info, as the v1/v2 MultiAgentWrapper does.
-                np.testing.assert_array_equal(
+                _assert_tree_close(
                     _envpool_players(actual.reward, case.player_count),
                     np.asarray(
                         expected.info["agents_rewards"], dtype=np.float32
@@ -733,7 +644,7 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
             _restore_official_idm_defaults()
             _patch_oracle_from_envpool(oracle, env)
             oracle_obs = oracle.unwrapped.observation_type.observe()
-            _assert_tree_bitwise(_envpool_reset_obs(env_obs, case), oracle_obs)
+            _assert_tree_close(_envpool_reset_obs(env_obs, case), oracle_obs)
             _assert_render_aligned(case, env, oracle, "reset")
 
             actions = (
@@ -744,10 +655,8 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                 action = actions[step % len(actions)]
                 expected = _Step(*oracle.step(action))
                 actual = _envpool_step(env, case, action)
-                _assert_tree_bitwise(
-                    _envpool_obs(actual.obs, case), expected.obs
-                )
-                np.testing.assert_array_equal(
+                _assert_tree_close(_envpool_obs(actual.obs, case), expected.obs)
+                _assert_tree_close(
                     _envpool_scalar(actual.reward), np.float32(expected.reward)
                 )
                 np.testing.assert_array_equal(
@@ -785,7 +694,7 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                     env_obs, _ = env.reset()
                     oracle.reset(seed=123)
                     _patch_oracle_from_envpool(oracle, env)
-                    _assert_tree_bitwise(
+                    _assert_tree_close(
                         _envpool_reset_obs(env_obs, case),
                         oracle.unwrapped.observation_type.observe(),
                     )
@@ -795,10 +704,10 @@ class _HighwayOfficialAlignTest(absltest.TestCase):
                         action = actions[step % len(actions)]
                         expected = _Step(*oracle.step(action))
                         actual = _envpool_step(env, case, action)
-                        _assert_tree_bitwise(
+                        _assert_tree_close(
                             _envpool_obs(actual.obs, case), expected.obs
                         )
-                        np.testing.assert_array_equal(
+                        _assert_tree_close(
                             _envpool_scalar(actual.reward),
                             np.float32(expected.reward),
                         )

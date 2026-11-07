@@ -34,7 +34,6 @@ PYBIND11_MODULE(craftax_debug, module) {
   CRAFTAX_PARAM(height);
   CRAFTAX_PARAM(width);
   CRAFTAX_PARAM(levels);
-  CRAFTAX_PARAM(symbolic);
   CRAFTAX_PARAM(fractal_noise_angles);
   CRAFTAX_PARAM(max_timesteps);
   CRAFTAX_PARAM(day_length);
@@ -57,7 +56,8 @@ PYBIND11_MODULE(craftax_debug, module) {
   CRAFTAX_PARAM(spawn_skeleton_chance);
 #undef CRAFTAX_PARAM
   py::class_<Game>(module, "Game")
-      .def(py::init<Params>())
+      .def(py::init<Params, std::uint32_t>(), py::arg("params"),
+           py::arg("seed") = 0)
       .def("reset", &Game::Reset)
       .def("step", &Game::Step)
       .def("done", &Game::Done)
@@ -108,9 +108,4 @@ PYBIND11_MODULE(craftax_debug, module) {
             });
         return out;
       });
-  module.def("split", &craftax::Split);
-  module.def("bits", &craftax::Bits);
-  module.def("uniform", &craftax::Uniform);
-  module.def("randint", &craftax::RandInt);
-  module.def("choice", &craftax::Choice);
 }

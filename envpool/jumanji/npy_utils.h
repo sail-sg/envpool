@@ -18,11 +18,29 @@
 #define ENVPOOL_JUMANJI_NPY_UTILS_H_
 
 #include <cstddef>
+#include <map>
+#include <memory>
+#include <mutex>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
 namespace jumanji::npy {
+
+// Concurrent pool slots share the immutable packaged data for the same path.
+template <typename Dataset>
+std::shared_ptr<const Dataset> LoadSharedDataset(
+    const std::string& path, Dataset (*load)(const std::string&)) {
+  static std::mutex mutex;
+  static std::map<std::string, std::weak_ptr<const Dataset>> cache;
+  std::scoped_lock lock(mutex);
+  if (auto dataset = cache[path].lock()) {
+    return dataset;
+  }
+  auto dataset = std::make_shared<const Dataset>(load(path));
+  cache[path] = dataset;
+  return dataset;
+}
 
 inline std::size_t HeaderLength(const std::vector<char>& bytes,
                                 const std::string& name) {

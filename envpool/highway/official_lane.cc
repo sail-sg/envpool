@@ -29,15 +29,9 @@ Vec2 operator*(double scale, Vec2 rhs) {
 
 Vec2 operator*(Vec2 lhs, double scale) { return scale * lhs; }
 
-double Dot(Vec2 lhs, Vec2 rhs) {
-  // Accumulate in coordinate order, as NumPy's two-element BLAS dot does.
-  return std::fma(lhs.y, rhs.y, lhs.x * rhs.x);
-}
+double Dot(Vec2 lhs, Vec2 rhs) { return lhs.x * rhs.x + lhs.y * rhs.y; }
 
-double Norm(Vec2 value) {
-  // np.linalg.norm uses sqrt(dot(v, v)); hypot can round differently.
-  return std::sqrt(Dot(value, value));
-}
+double Norm(Vec2 value) { return std::sqrt(Dot(value, value)); }
 
 double WrapToPi(double angle) {
   angle = std::fmod(angle + kPi, 2.0 * kPi);

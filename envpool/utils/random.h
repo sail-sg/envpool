@@ -14,8 +14,8 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <initializer_list>
 #include <random>
-#include <vector>
 
 namespace envpool {
 
@@ -34,10 +34,16 @@ class Random {
     return std::uniform_int_distribution<T>(0, high - 1)(generator_);
   }
 
-  template <typename T>
-  void Shuffle(std::vector<T>* values) {
+  int WeightedIndex(std::initializer_list<double> weights) {
+    return std::discrete_distribution<int>(weights)(generator_);
+  }
+
+  template <typename Container>
+  void Shuffle(Container* values) {
     std::shuffle(values->begin(), values->end(), generator_);
   }
+
+  std::uint32_t Bits() { return static_cast<std::uint32_t>(generator_()); }
 
   double Normal() { return normal_(generator_); }
 

@@ -52,19 +52,11 @@ std::vector<float> Game::FullSymbolic() const {
     for (int i = 0; i < counts[group]; ++i) {
       const auto& mob =
           (*groups[group])[state.player_level * counts[group] + i];
-      Pos pos = mob.position - state.player_position + Pos{h / 2, w / 2};
-      const bool on_screen = pos.y >= 0 && pos.y < h && pos.x >= 0 && pos.x < w;
-      if (pos.y < 0) {
-        pos.y += h;
-      }
-      if (pos.x < 0) {
-        pos.x += w;
-      }
+      const Pos pos = mob.position - state.player_position + Pos{h / 2, w / 2};
       const int identifier = group * 8 + mob.type_id;
-      if (pos.y >= 0 && pos.y < h && pos.x >= 0 && pos.x < w &&
+      if (mob.mask && pos.y >= 0 && pos.y < h && pos.x >= 0 && pos.x < w &&
           identifier >= 0 && identifier < 40) {
-        obs[(pos.y * w + pos.x) * channels + 42 + identifier] =
-            static_cast<float>(on_screen && mob.mask);
+        obs[(pos.y * w + pos.x) * channels + 42 + identifier] = 1;
       }
     }
   }

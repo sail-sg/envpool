@@ -24,20 +24,9 @@ namespace craftax {
 namespace b = full::block;
 namespace c = full::achievement;
 
-void Game::FullMobs(Key rng) {
+void Game::FullMobs() {
   const int level = state.player_level;
   const bool boss = level == params.levels - 1;
-  auto toward = [&](Pos pos, Key key) {
-    const Pos delta = state.player_position - pos;
-    const int y = std::abs(delta.y);
-    const int x = std::abs(delta.x);
-    const auto total = static_cast<float>(y + x);
-    const int axis =
-        std::min(1, Choice(key, {static_cast<float>(y >= x) / total,
-                                 static_cast<float>(x >= y) / total}));
-    return axis == 0 ? Pos{(delta.y > 0) - (delta.y < 0), 0}
-                     : Pos{0, (delta.x > 0) - (delta.x < 0)};
-  };
   auto move_mob = [&](Mob* mob, Pos proposed, int kind, int cooldown) {
     const Pos position =
         FullValid(proposed,
@@ -53,14 +42,12 @@ void Game::FullMobs(Key rng) {
     mob->position = position;
     mob->attack_cooldown = cooldown;
   };
-  TakeKey(&rng);
   for (int i = 0; i < params.max_melee_mobs; ++i) {
     auto& mob = state.melee_mobs[level * params.max_melee_mobs + i];
-    const Pos random = mob.position + Direction(RandInt(TakeKey(&rng), 1, 5));
-    const Pos chase = mob.position + toward(mob.position, TakeKey(&rng));
     const int distance = Distance(mob.position, state.player_position);
-    const float choose = Uniform(TakeKey(&rng));
-    Pos proposed = (distance < 10 || boss) && choose < 0.75f ? chase : random;
+    const bool chase = (distance < 10 || boss) && rng_.Uniform() < 0.75f;
+    Pos proposed = mob.position + (chase ? TowardPlayer(mob.position)
+                                         : Direction(1 + rng_.Integer(4)));
     const bool attack = distance == 1 && mob.attack_cooldown <= 0 && mob.mask;
     if (attack) {
       proposed = mob.position;
@@ -73,26 +60,23 @@ void Game::FullMobs(Key rng) {
       state.achievements[c::WAKE_UP] |= static_cast<int>(state.is_sleeping);
       state.is_sleeping = state.is_resting = false;
     }
-    rng = TakeKey(&rng);
     move_mob(&mob, proposed, 1, attack ? 5 : mob.attack_cooldown - 1);
   }
-  TakeKey(&rng);
   for (int i = 0; i < params.max_passive_mobs; ++i) {
     auto& mob = state.passive_mobs[level * params.max_passive_mobs + i];
-    const Pos proposed = mob.position + Direction(RandInt(TakeKey(&rng), 1, 9));
+    const Pos proposed = mob.position + Direction(1 + rng_.Integer(8));
     move_mob(&mob, proposed, 0, mob.attack_cooldown);
   }
-  TakeKey(&rng);
   for (int i = 0; i < params.max_ranged_mobs; ++i) {
     auto& mob = state.ranged_mobs[level * params.max_ranged_mobs + i];
-    const Pos random = mob.position + Direction(RandInt(TakeKey(&rng), 1, 5));
-    const Pos direction = toward(mob.position, TakeKey(&rng));
+    const Pos random = mob.position + Direction(1 + rng_.Integer(4));
+    const Pos direction = TowardPlayer(mob.position);
     const int distance = Distance(mob.position, state.player_position);
     Pos proposed = distance >= 6 ? mob.position + direction : random;
     if (distance <= 3) {
       proposed = mob.position - direction;
     }
-    if (Uniform(TakeKey(&rng)) <= 0.85f) {
+    if (rng_.Uniform() <= 0.85f) {
       proposed = random;
     }
     const bool attack =
@@ -109,7 +93,6 @@ void Game::FullMobs(Key rng) {
     }
     move_mob(&mob, proposed, 2, attack ? 4 : mob.attack_cooldown - 1);
   }
-  TakeKey(&rng);
   for (int i = 0; i < params.max_mob_projectiles; ++i) {
     const int index = level * params.max_mob_projectiles + i;
     auto& mob = state.mob_projectiles[index];
@@ -133,7 +116,6 @@ void Game::FullMobs(Key rng) {
     }
     SetBlock(proposed, destroy ? b::PATH : block);
   }
-  TakeKey(&rng);
   for (int i = 0; i < params.max_player_projectiles; ++i) {
     const int index = level * params.max_player_projectiles + i;
     auto& mob = state.player_projectiles[index];
@@ -170,7 +152,7 @@ void Game::FullMobs(Key rng) {
   }
 }
 
-void Game::FullSpawn(Key rng) {
+void Game::FullSpawn() {
   const int level = state.player_level;
   const bool boss = level == params.levels - 1;
   int coefficient =
@@ -197,55 +179,42 @@ void Game::FullSpawn(Key rng) {
     if (kind != 0) {
       chance *= coefficient;
     }
-    const float draw = Uniform(TakeKey(&rng));
-    std::vector<float> weights(Cells());
-    int valid_count = 0;
-    for (int y = 0; y < params.height; ++y) {
-      for (int x = 0; x < params.width; ++x) {
-        const Pos pos{y, x};
-        const int block = Block(pos);
-        const float distance = EuclideanDistance(pos, state.player_position);
-        bool terrain = block == b::GRASS || block == b::PATH ||
-                       block == b::FIRE_GRASS || block == b::ICE_GRASS;
-        if (kind == 2 && type == 5) {
-          terrain = block == b::WATER;
-        }
-        if (kind > 0 && boss) {
-          terrain =
-              block == b::GRAVE || block == b::GRAVE2 || block == b::GRAVE3;
-        }
-        const bool hostile_range = boss ? distance <= 6 : distance > 9;
-        const bool range = kind == 0 ? distance > 3 : hostile_range;
-        const bool valid = terrain && range &&
-                           distance < params.mob_despawn_distance &&
-                           (state.mob_map[Index(pos)] == 0u);
-        weights[y * params.width + x] = static_cast<float>(valid);
-        valid_count += static_cast<int>(valid);
+    const auto end = mobs.begin() + base + counts[kind];
+    const auto slot = std::find_if(mobs.begin() + base, end,
+                                   [](const Mob& mob) { return !mob.mask; });
+    // Upstream writes type_id even when this draw did not spawn a mob.
+    auto& mob = slot == end ? mobs[base] : *slot;
+    mob.type_id = type;
+    if (slot == end) {
+      SetMob(mob.position, true);
+      continue;
+    }
+    if ((boss && kind == 0) || rng_.Uniform() >= chance) {
+      continue;
+    }
+    const int position = SampleCell(rng_, Cells(), [&](int cell) {
+      const Pos pos{cell / params.width, cell % params.width};
+      const int block = Block(pos);
+      const float distance = EuclideanDistance(pos, state.player_position);
+      bool terrain = block == b::GRASS || block == b::PATH ||
+                     block == b::FIRE_GRASS || block == b::ICE_GRASS;
+      if (kind == 2 && type == 5) {
+        terrain = block == b::WATER;
       }
-    }
-    for (auto& weight : weights) {
-      weight /= static_cast<float>(valid_count);
-    }
-    const int position = Choice(TakeKey(&rng), weights);
-    int slot = base;
-    bool has_slot = false;
-    for (int i = base; i < base + counts[kind]; ++i) {
-      if (!mobs[i].mask) {
-        slot = i;
-        has_slot = true;
-        break;
+      if (kind > 0 && boss) {
+        terrain = block == b::GRAVE || block == b::GRAVE2 || block == b::GRAVE3;
       }
-    }
-    auto& mob = mobs[slot];
-    if (has_slot && valid_count > 0 && draw < chance && (!boss || kind != 0)) {
-      mob.position = {position / params.height, position % params.width};
+      const bool hostile_range = boss ? distance <= 6 : distance > 9;
+      const bool range = kind == 0 ? distance > 3 : hostile_range;
+      return terrain && range && distance < params.mob_despawn_distance &&
+             !state.mob_map[level * Cells() + cell];
+    });
+    if (position >= 0) {
+      mob.position = {position / params.width, position % params.width};
       mob.health = full::MOB_TYPE_HEALTH_MAPPING[type][kind];
       mob.mask = true;
+      SetMob(mob.position, true);
     }
-    // Upstream writes type_id even when this draw did not spawn a mob.
-    mob.type_id = type;
-    SetMob(mob.position,
-           (state.mob_map[Index(mob.position)] != 0u) || mob.mask);
   }
 }
 

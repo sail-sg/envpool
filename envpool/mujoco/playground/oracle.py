@@ -15,10 +15,7 @@
 
 from __future__ import annotations
 
-import os
 import sys
-from functools import lru_cache
-from pathlib import Path
 from typing import Any
 from unittest import mock
 
@@ -81,6 +78,7 @@ from mujoco_playground._src.manipulation.leap_hand import (
 )
 
 from envpool.mujoco.oracle import runfiles_repository
+from envpool.python.runfile_path import find_runfile
 
 
 class FrameRenderer:
@@ -250,7 +248,7 @@ def make_oracle(task_id: str) -> Any:
         # meshes with same-named collision meshes. Use the pinned file tree
         # for the entire oracle, including its independent physics rollout.
         xml = find_runfile(
-            "envpool/mujoco/playground/assets/mujoco_playground/_src/"
+            "envpool/envpool/mujoco/playground/assets/mujoco_playground/_src/"
             "locomotion/op3/xmls/scene_mjx_feetonly.xml"
         )
         with mock.patch.object(
@@ -403,68 +401,3 @@ def _configure_oracle_assets() -> None:
     oracle_mjx_env.MENAGERIE_PATH = epath.Path(
         runfiles_repository("mujoco_menagerie_playground").as_posix()
     )
-
-
-def find_runfile(relative: str) -> Path:
-    """Resolve a Playground asset in directory or manifest-only runfiles."""
-    manifest_path = _find_manifest_runfile(relative)
-    if manifest_path is not None:
-        return manifest_path
-    roots = _candidate_runfile_roots()
-    for root in roots:
-        path = root / relative
-        if path.exists():
-            return path
-    for root in roots:
-        if root.is_dir():
-            for workspace in root.iterdir():
-                candidate = workspace / relative
-                if candidate.exists():
-                    return candidate
-    raise FileNotFoundError(f"Could not find runfile {relative!r}")
-
-
-def _find_manifest_runfile(relative: str) -> Path | None:
-    relative = relative.replace("\\", "/")
-    candidates = [relative]
-    workspace = os.environ.get("TEST_WORKSPACE")
-    if workspace:
-        candidates.append(f"{workspace}/{relative}")
-    for logical, physical in _runfiles_manifest_entries():
-        for candidate in candidates:
-            if logical == candidate:
-                return physical
-            prefix = f"{candidate.rstrip('/')}/"
-            if logical.startswith(prefix):
-                path = physical
-                for _ in logical[len(prefix) :].split("/"):
-                    path = path.parent
-                return path
-    return None
-
-
-@lru_cache
-def _runfiles_manifest_entries() -> tuple[tuple[str, Path], ...]:
-    manifest = os.environ.get("RUNFILES_MANIFEST_FILE")
-    if not manifest:
-        return ()
-    entries = []
-    with Path(manifest).open(encoding="utf-8") as f:
-        for line in f:
-            logical, sep, physical = line.rstrip("\n").partition(" ")
-            entries.append((logical, Path(physical if sep else logical)))
-    return tuple(entries)
-
-
-def _candidate_runfile_roots() -> list[Path]:
-    roots: list[Path] = []
-    for env_name in ("TEST_SRCDIR", "RUNFILES_DIR", "PYTHON_RUNFILES"):
-        if os.environ.get(env_name):
-            roots.append(Path(os.environ[env_name]))
-    roots.append(Path.cwd())
-    roots.extend(Path(__file__).parents)
-    roots.extend(Path(__file__).resolve().parents)
-    workspace = os.environ.get("TEST_WORKSPACE")
-    if workspace:
-        roots.extend(root / workspace for root in list(roots))
-    return list(dict.fromkeys(roots))

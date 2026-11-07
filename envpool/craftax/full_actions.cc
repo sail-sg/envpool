@@ -90,36 +90,26 @@ void Game::FullCraft(int action) {
   }
 }
 
-static void Loot(Key rng, int level, bool opened, Inventory* inv) {
-  const bool torch = Uniform(TakeKey(&rng)) < 0.6f;
-  const int torches = RandInt(TakeKey(&rng), 4, 8);
-  const bool ore = Uniform(TakeKey(&rng)) < 0.6f;
-  const int ore_id = Choice(TakeKey(&rng), {0.3f, 0.3f, 0.15f, 0.125f, 0.125f});
-  const Key amount = TakeKey(&rng);
-  const bool potion = Uniform(TakeKey(&rng)) < 0.5f;
-  const int potion_id = RandInt(TakeKey(&rng), 0, 6);
-  const int potions = RandInt(TakeKey(&rng), 1, 3);
-  const bool arrow = Uniform(TakeKey(&rng)) < 0.25f;
-  const int arrows = RandInt(TakeKey(&rng), 1, 5);
-  const bool tool = Uniform(TakeKey(&rng)) < 0.2f;
-  const int tool_id = RandInt(TakeKey(&rng), 0, 2);
-  const int pickaxe = Choice(TakeKey(&rng), {0.4f, 0.3f, 0.2f, 0.1f}) + 1;
-  const int sword = Choice(TakeKey(&rng), {0.4f, 0.3f, 0.2f, 0.1f}) + 1;
-  inv->torches += static_cast<int>(torch) * torches;
-  if (ore) {
+static void Loot(envpool::Random& rng, int level, bool opened, Inventory* inv) {
+  if (rng.Uniform() < 0.6) {
+    inv->torches += 4 + rng.Integer(4);
+  }
+  if (rng.Uniform() < 0.6) {
     const std::array<int*, 5> ores{&inv->coal, &inv->iron, &inv->diamond,
                                    &inv->sapphire, &inv->ruby};
-    constexpr std::array<int, 5> limits{4, 3, 2, 2, 2};
-    const int index = std::clamp(ore_id, 0, 4);
-    *ores[index] += RandInt(amount, 1, limits[index]);
+    constexpr std::array<int, 5> max_amount{3, 2, 1, 1, 1};
+    const int index = rng.WeightedIndex({0.3, 0.3, 0.15, 0.125, 0.125});
+    *ores[index] += 1 + rng.Integer(max_amount[index]);
   }
-  inv->potions[potion_id] += static_cast<int>(potion) * potions;
-  inv->arrows += static_cast<int>(arrow) * arrows;
-  if (tool && tool_id == 0) {
-    inv->pickaxe = std::max(inv->pickaxe, pickaxe);
+  if (rng.Uniform() < 0.5) {
+    inv->potions[rng.Integer(6)] += 1 + rng.Integer(2);
   }
-  if (tool && tool_id == 1) {
-    inv->sword = std::max(inv->sword, sword);
+  if (rng.Uniform() < 0.25) {
+    inv->arrows += 1 + rng.Integer(4);
+  }
+  if (rng.Uniform() < 0.2) {
+    int& tool = rng.Integer(2) == 0 ? inv->pickaxe : inv->sword;
+    tool = std::max(tool, 1 + rng.WeightedIndex({0.4, 0.3, 0.2, 0.1}));
   }
   if (!opened && level == 1) {
     inv->bow = 1;
@@ -129,7 +119,7 @@ static void Loot(Key rng, int level, bool opened, Inventory* inv) {
   }
 }
 
-void Game::FullDo(Key rng, int action) {
+void Game::FullDo(int action) {
   if (action != a::DO) {
     return;
   }
@@ -175,8 +165,7 @@ void Game::FullDo(Key rng, int action) {
   if (block == b::FURNACE || block == b::CRAFTING_TABLE) {
     SetBlock(pos, b::PATH);
   }
-  const float sapling = Uniform(TakeKey(&rng));
-  if (block == b::GRASS && sapling < 0.1f) {
+  if (block == b::GRASS && rng_.Uniform() < 0.1f) {
     ++inv.sapling;
   }
   if (block == b::WATER || block == b::FOUNTAIN) {
@@ -200,10 +189,9 @@ void Game::FullDo(Key rng, int action) {
     }
     state.growing_plants_age[index] = 0;
   }
-  const Key loot = TakeKey(&rng);
   if (chest) {
     SetBlock(pos, b::PATH);
-    Loot(loot, state.player_level, opened, &inv);
+    Loot(rng_, state.player_level, opened, &inv);
     state.achievements[c::OPEN_CHEST] = 1u;
   }
   state.achievements[c::DAMAGE_NECROMANCER] |= static_cast<int>(boss);
@@ -267,7 +255,7 @@ void Game::FullPlace(int action) {
   }
 }
 
-void Game::FullUse(Key book_rng, Key enchant_rng, int action) {
+void Game::FullUse(int action) {
   auto& s = state;
   auto& inv = s.inventory;
   if (action == a::SHOOT_ARROW && inv.bow >= 1 && inv.arrows >= 1 &&
@@ -306,12 +294,8 @@ void Game::FullUse(Key book_rng, Key enchant_rng, int action) {
     }
   }
   if (action == a::READ_BOOK && inv.books > 0) {
-    const auto count =
-        static_cast<float>(2 - s.learned_spells[0] - s.learned_spells[1]);
-    const int learn = std::clamp(
-        Choice(TakeKey(&book_rng), {(1 - s.learned_spells[0]) / count,
-                                    (1 - s.learned_spells[1]) / count}),
-        0, 1);
+    const int learn = std::max(
+        0, SampleCell(rng_, 2, [&](int i) { return !s.learned_spells[i]; }));
     --inv.books;
     s.learned_spells[learn] = 1u;
     s.achievements[learn == 0 ? c::LEARN_FIREBALL : c::LEARN_ICEBALL] = 1u;
@@ -337,13 +321,11 @@ void Game::FullUse(Key book_rng, Key enchant_rng, int action) {
     const bool has_unenchanted =
         std::find(s.armour_enchantments.begin(), s.armour_enchantments.end(),
                   0) != s.armour_enchantments.end();
-    std::vector<float> weights;
-    weights.reserve(s.armour_enchantments.size());
-    for (int enchantment : s.armour_enchantments) {
-      weights.push_back(static_cast<float>(
-          has_unenchanted ? enchantment == 0 : enchantment != type));
-    }
-    const int target = std::clamp(Choice(TakeKey(&enchant_rng), weights), 0, 3);
+    const int target = std::max(
+        0, SampleCell(rng_, 4, [&](int i) {
+          const int enchantment = s.armour_enchantments[i];
+          return has_unenchanted ? enchantment == 0 : enchantment != type;
+        }));
     s.armour_enchantments[target] = type;
     s.achievements[c::ENCHANT_ARMOUR] = 1u;
     enchanted = true;

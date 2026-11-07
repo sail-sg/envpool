@@ -25,6 +25,25 @@ from envpool.registration import make_gymnasium
 class JumanjiCVRPTest(parameterized.TestCase):
     """Checks native CVRP transitions."""
 
+    def test_invalid_depot_action_terminates_with_penalty(self) -> None:
+        """Revisiting the starting depot is invalid and incurs the full penalty."""
+        env = make_gymnasium("CVRP-v1", num_envs=1, seed=0)
+        try:
+            obs, _ = env.reset()
+            self.assertFalse(bool(obs["action_mask"][0, 0]))
+
+            obs, reward, terminated, truncated, _ = env.step(
+                np.asarray([0], dtype=np.int32)
+            )
+            # Jumanji DenseReward uses twice the unit-square diagonal per city.
+            self.assertAlmostEqual(float(reward[0]), -40 * np.sqrt(2), places=5)
+            self.assertTrue(bool(terminated[0]))
+            self.assertFalse(bool(truncated[0]))
+            self.assertEqual(int(obs["position"][0]), 0)
+            self.assertAlmostEqual(float(obs["capacity"][0]), 1.0)
+        finally:
+            env.close()
+
     @parameterized.parameters(3, 20, 30)
     def test_visit_customer_and_return_to_depot(self, capacity: int) -> None:
         """Checks visiting a customer then returning to depot."""

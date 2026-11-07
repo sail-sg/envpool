@@ -95,22 +95,34 @@ float Game::Light(int timestep) const {
   return 1.0f - cosine * cosine * cosine;
 }
 
-void Game::Reset(Key rng) {
-  Initialize();
-  if (params.classic) {
-    ClassicWorld(rng);
-  } else {
-    FullWorld(params.symbolic ? Split(rng, 1) : rng);
-  }
+Pos Game::TowardPlayer(Pos pos) {
+  const Pos delta = state.player_position - pos;
+  const int y = std::abs(delta.y);
+  const int x = std::abs(delta.x);
+  return y > x || (y == x && rng_.Integer(2) == 0)
+             ? Pos{std::clamp(delta.y, -1, 1), 0}
+             : Pos{0, std::clamp(delta.x, -1, 1)};
 }
 
-float Game::Step(Key rng, int action) {
+void Game::Reset() {
+  Initialize();
+  if (params.classic) {
+    ClassicWorld();
+  } else {
+    FullWorld();
+  }
+  SampleRenderSeed();
+}
+
+float Game::Step(int action) {
   const int count =
       params.classic ? classic::action::COUNT : full::action::COUNT;
   if (action < 0 || action >= count) {
     throw std::invalid_argument("invalid Craftax action");
   }
-  return params.classic ? ClassicStep(rng, action) : FullStep(rng, action);
+  const float reward = params.classic ? ClassicStep(action) : FullStep(action);
+  SampleRenderSeed();
+  return reward;
 }
 
 bool Game::Done() const {
@@ -169,17 +181,9 @@ std::vector<float> Game::Symbolic() const {
       &state.mob_projectiles};
   for (int group = 0; group < 4; ++group) {
     for (const auto& mob : *groups[group]) {
-      Pos pos = mob.position - state.player_position + Pos{h / 2, w / 2};
-      const bool on_screen = pos.y >= 0 && pos.y < h && pos.x >= 0 && pos.x < w;
-      if (pos.y < 0) {
-        pos.y += h;
-      }
-      if (pos.x < 0) {
-        pos.x += w;
-      }
-      if (pos.y >= 0 && pos.y < h && pos.x >= 0 && pos.x < w) {
-        obs[(pos.y * w + pos.x) * channels + 17 + group] =
-            static_cast<float>(on_screen && mob.mask);
+      const Pos pos = mob.position - state.player_position + Pos{h / 2, w / 2};
+      if (mob.mask && pos.y >= 0 && pos.y < h && pos.x >= 0 && pos.x < w) {
+        obs[(pos.y * w + pos.x) * channels + 17 + group] = 1;
       }
     }
   }

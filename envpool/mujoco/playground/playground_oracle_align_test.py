@@ -98,10 +98,10 @@ from mujoco_playground._src.manipulation.leap_hand import (
 import envpool.mujoco.playground.registration as playground_registration
 from envpool.mujoco.playground.oracle import (
     FrameRenderer,
-    find_runfile,
     make_oracle,
     native_config,
 )
+from envpool.python.runfile_path import find_runfile
 from envpool.registration import make_gymnasium
 
 configure_macos_mujoco_renderer()
@@ -584,7 +584,7 @@ def _oracle_physics(task_id: str) -> Iterator[Any]:
         getattr(library, name).restype = None
     relative = Path(oracle.xml_path).relative_to(oracle_mjx_env.ROOT_PATH)
     xml = find_runfile(
-        "envpool/mujoco/playground/assets/mujoco_playground/_src/"
+        "envpool/envpool/mujoco/playground/assets/mujoco_playground/_src/"
         + relative.as_posix()
     )
     error = ctypes.create_string_buffer(4096)

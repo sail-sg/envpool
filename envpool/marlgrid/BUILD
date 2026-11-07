@@ -61,6 +61,7 @@ py_test(
     deps = [
         ":marlgrid",
         ":marlgrid_registration",
+        "//envpool/python:runfile_path",
         "//envpool/python:seed_test_utils",
         requirement("absl-py"),
         requirement("gymnasium"),
