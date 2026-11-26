@@ -132,7 +132,7 @@ class _OracleTest(parameterized.TestCase):
                 self._check_frame(pool, env, p, t)
             if done:
                 return float(reward[0])
-        self.fail("Action sequence ended before the episode")
+        raise AssertionError("Action sequence ended before the episode")
 
     @parameterized.parameters(*_IDS)
     def test_episode(self, name: str) -> None:
