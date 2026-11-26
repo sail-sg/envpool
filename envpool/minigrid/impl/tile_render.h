@@ -25,10 +25,10 @@ namespace minigrid {
 using CoordFn = std::function<bool(float, float)>;
 using Rgb = std::array<uint8_t, 3>;
 
-constexpr int kTilePixels = 32;
-constexpr int kTileSubdivs = 3;
-constexpr Rgb kGridColor = {100, 100, 100};
-constexpr Rgb kAgentColor = {255, 0, 0};
+inline constexpr int kTilePixels = 32;
+inline constexpr int kTileSubdivs = 3;
+inline constexpr Rgb kGridColor = {100, 100, 100};
+inline constexpr Rgb kAgentColor = {255, 0, 0};
 
 inline Rgb ScaleColor(const Rgb& color, float scale) {
   return {
