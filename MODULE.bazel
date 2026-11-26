@@ -188,4 +188,5 @@ use_repo(
     "vizdoom",
     "vizdoom_extra_maps",
     "vizdoom_lib",
+    "xminigrid_upstream",
 )

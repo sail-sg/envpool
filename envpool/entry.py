@@ -35,3 +35,4 @@ import envpool.pgx.registration  # noqa: F401
 import envpool.procgen.registration  # noqa: F401
 import envpool.toy_text.registration  # noqa: F401
 import envpool.vizdoom.registration  # noqa: F401
+import envpool.xminigrid.registration  # noqa: F401

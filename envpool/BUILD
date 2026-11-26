@@ -54,6 +54,7 @@ py_library(
         "//envpool/procgen:procgen_registration",
         "//envpool/toy_text:toy_text_registration",
         "//envpool/vizdoom:vizdoom_registration",
+        "//envpool/xminigrid:registration",
     ],
 )
 
@@ -81,6 +82,7 @@ py_library(
         "//envpool/python",
         "//envpool/toy_text",
         "//envpool/vizdoom",
+        "//envpool/xminigrid",
     ],
 )
 

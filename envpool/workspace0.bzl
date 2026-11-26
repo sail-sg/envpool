@@ -29,6 +29,15 @@ def workspace():
     """Load requested packages."""
     maybe(
         http_archive,
+        name = "xminigrid_upstream",
+        type = "tar.gz",
+        sha256 = "31474b6689d1e8f68d87bdf08df2e68a63c7c2515d82f7dfb16b6c859c221c56",
+        strip_prefix = "xland-minigrid-0d306d1414dcb6e451358d94e7d9a91879462ee1",
+        urls = ["https://codeload.github.com/dunnolab/xland-minigrid/tar.gz/0d306d1414dcb6e451358d94e7d9a91879462ee1"],
+        build_file = "//third_party/xminigrid:xminigrid.BUILD",
+    )
+    maybe(
+        http_archive,
         name = "mpe2_upstream",
         type = "tar.gz",
         sha256 = "319d1899d86a2ff8a88d322f55424a0ec95bc0ceea013d32686ca6ee9aeeeedb",

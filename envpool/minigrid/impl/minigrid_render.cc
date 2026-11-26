@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "envpool/minigrid/impl/minigrid_env.h"
+#include "envpool/minigrid/impl/tile_render.h"
 #include "opencv2/opencv.hpp"
 
 namespace minigrid {
@@ -27,13 +28,6 @@ namespace {
 
 inline int GridOffset(int x, int y, int height) { return (x * height + y) * 3; }
 
-using CoordFn = std::function<bool(float, float)>;
-using Rgb = std::array<uint8_t, 3>;
-
-constexpr int kTilePixels = 32;
-constexpr int kTileSubdivs = 3;
-constexpr Rgb kGridColor = {100, 100, 100};
-constexpr Rgb kAgentColor = {255, 0, 0};
 constexpr Rgb kLavaColor = {255, 128, 0};
 constexpr std::array<Rgb, 6> MakeObjectColors() {
   return {
@@ -45,59 +39,6 @@ constexpr std::array<Rgb, 6> MakeObjectColors() {
 constexpr std::array<Rgb, 6> kObjectColors = MakeObjectColors();
 
 Rgb ColorValue(Color color) { return kObjectColors[static_cast<int>(color)]; }
-
-Rgb ScaleColor(const Rgb& color, float scale) {
-  return {
-      static_cast<uint8_t>(std::floor(color[0] * scale)),
-      static_cast<uint8_t>(std::floor(color[1] * scale)),
-      static_cast<uint8_t>(std::floor(color[2] * scale)),
-  };
-}
-
-CoordFn PointInRect(float xmin, float xmax, float ymin, float ymax) {
-  return [=](float x, float y) {
-    return x >= xmin && x <= xmax && y >= ymin && y <= ymax;
-  };
-}
-
-CoordFn PointInCircle(float cx, float cy, float r) {
-  return [=](float x, float y) {
-    const float dx = x - cx;
-    const float dy = y - cy;
-    return dx * dx + dy * dy <= r * r;
-  };
-}
-
-CoordFn PointInTriangle(const std::array<float, 2>& a,
-                        const std::array<float, 2>& b,
-                        const std::array<float, 2>& c) {
-  return [=](float x, float y) {
-    const std::array<float, 2> v0 = {c[0] - a[0], c[1] - a[1]};
-    const std::array<float, 2> v1 = {b[0] - a[0], b[1] - a[1]};
-    const std::array<float, 2> v2 = {x - a[0], y - a[1]};
-    const float dot00 = v0[0] * v0[0] + v0[1] * v0[1];
-    const float dot01 = v0[0] * v1[0] + v0[1] * v1[1];
-    const float dot02 = v0[0] * v2[0] + v0[1] * v2[1];
-    const float dot11 = v1[0] * v1[0] + v1[1] * v1[1];
-    const float dot12 = v1[0] * v2[0] + v1[1] * v2[1];
-    const float inv_denom = 1.0f / (dot00 * dot11 - dot01 * dot01);
-    const float u = (dot11 * dot02 - dot01 * dot12) * inv_denom;
-    const float v = (dot00 * dot12 - dot01 * dot02) * inv_denom;
-    return u >= 0.0f && v >= 0.0f && u + v < 1.0f;
-  };
-}
-
-CoordFn RotateFn(const CoordFn& fn, float cx, float cy, float theta) {
-  return [=](float x, float y) {
-    const float centered_x = x - cx;
-    const float centered_y = y - cy;
-    const float x2 =
-        cx + centered_x * std::cos(-theta) - centered_y * std::sin(-theta);
-    const float y2 =
-        cy + centered_y * std::cos(-theta) + centered_x * std::sin(-theta);
-    return fn(x2, y2);
-  };
-}
 
 CoordFn PointInLine(float x0, float y0, float x1, float y1, float r) {
   const std::array<float, 2> p0 = {x0, y0};
@@ -121,49 +62,6 @@ CoordFn PointInLine(float x0, float y0, float x1, float y1, float r) {
     const float dy = y - proj[1];
     return std::sqrt(dx * dx + dy * dy) <= r;
   };
-}
-
-void FillCoords(std::vector<uint8_t>* img, int width, int height,
-                const CoordFn& fn, const Rgb& color) {
-  for (int y = 0; y < height; ++y) {
-    for (int x = 0; x < width; ++x) {
-      const auto yf = static_cast<float>(y + 0.5f) / height;
-      const auto xf = static_cast<float>(x + 0.5f) / width;
-      if (!fn(xf, yf)) {
-        continue;
-      }
-      const int offset = (y * width + x) * 3;
-      (*img)[offset + 0] = color[0];
-      (*img)[offset + 1] = color[1];
-      (*img)[offset + 2] = color[2];
-    }
-  }
-}
-
-std::vector<uint8_t> Downsample(const std::vector<uint8_t>& src, int width,
-                                int height, int factor) {
-  CHECK_EQ(width % factor, 0);
-  CHECK_EQ(height % factor, 0);
-  const int out_width = width / factor;
-  const int out_height = height / factor;
-  std::vector<uint8_t> out(out_width * out_height * 3, 0);
-  for (int y = 0; y < out_height; ++y) {
-    for (int x = 0; x < out_width; ++x) {
-      for (int channel = 0; channel < 3; ++channel) {
-        int sum = 0;
-        for (int dy = 0; dy < factor; ++dy) {
-          for (int dx = 0; dx < factor; ++dx) {
-            const int src_x = x * factor + dx;
-            const int src_y = y * factor + dy;
-            sum += src[(src_y * width + src_x) * 3 + channel];
-          }
-        }
-        out[(y * out_width + x) * 3 + channel] =
-            static_cast<uint8_t>(sum / (factor * factor));
-      }
-    }
-  }
-  return out;
 }
 
 void RenderWorldObj(const WorldObj& obj, std::vector<uint8_t>* img, int width,
@@ -199,40 +97,11 @@ void RenderWorldObj(const WorldObj& obj, std::vector<uint8_t>* img, int width,
                  color);
       return;
     case kDoor:
-      if (obj.GetDoorOpen()) {
-        FillCoords(img, width, height, PointInRect(0.88f, 1.0f, 0.0f, 1.0f),
-                   color);
-        FillCoords(img, width, height, PointInRect(0.92f, 0.96f, 0.04f, 0.96f),
-                   Rgb{0, 0, 0});
-        return;
-      }
-      FillCoords(img, width, height, PointInRect(0.0f, 1.0f, 0.0f, 1.0f),
-                 color);
-      if (obj.GetDoorLocked()) {
-        FillCoords(img, width, height, PointInRect(0.06f, 0.94f, 0.06f, 0.94f),
-                   ScaleColor(color, 0.45f));
-        FillCoords(img, width, height, PointInRect(0.52f, 0.75f, 0.50f, 0.56f),
-                   color);
-        return;
-      }
-      FillCoords(img, width, height, PointInRect(0.04f, 0.96f, 0.04f, 0.96f),
-                 Rgb{0, 0, 0});
-      FillCoords(img, width, height, PointInRect(0.08f, 0.92f, 0.08f, 0.92f),
-                 color);
-      FillCoords(img, width, height, PointInRect(0.12f, 0.88f, 0.12f, 0.88f),
-                 Rgb{0, 0, 0});
-      FillCoords(img, width, height, PointInCircle(0.75f, 0.50f, 0.08f), color);
+      DrawDoor(img, width, height, color, obj.GetDoorOpen(),
+               obj.GetDoorLocked());
       return;
     case kKey:
-      FillCoords(img, width, height, PointInRect(0.50f, 0.63f, 0.31f, 0.88f),
-                 color);
-      FillCoords(img, width, height, PointInRect(0.38f, 0.50f, 0.59f, 0.66f),
-                 color);
-      FillCoords(img, width, height, PointInRect(0.38f, 0.50f, 0.81f, 0.88f),
-                 color);
-      FillCoords(img, width, height, PointInCircle(0.56f, 0.28f, 0.19f), color);
-      FillCoords(img, width, height, PointInCircle(0.56f, 0.28f, 0.064f),
-                 Rgb{0, 0, 0});
+      DrawKey(img, width, height, color);
       return;
     case kBall:
       FillCoords(img, width, height, PointInCircle(0.5f, 0.5f, 0.31f), color);
@@ -262,11 +131,7 @@ std::vector<uint8_t> RenderTile(const WorldObj* obj, int agent_dir) {
     RenderWorldObj(*obj, &img, hi_width, hi_height);
   }
   if (agent_dir >= 0) {
-    CoordFn tri =
-        PointInTriangle({0.12f, 0.19f}, {0.87f, 0.50f}, {0.12f, 0.81f});
-    tri =
-        RotateFn(tri, 0.5f, 0.5f, 0.5f * static_cast<float>(M_PI) * agent_dir);
-    FillCoords(&img, hi_width, hi_height, tri, kAgentColor);
+    DrawAgent(&img, hi_width, hi_height, agent_dir);
   }
   return Downsample(img, hi_width, hi_height, kTileSubdivs);
 }

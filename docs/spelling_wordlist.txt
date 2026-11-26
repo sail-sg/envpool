@@ -75,6 +75,8 @@ Homebrew
 macOS
 Procgen
 Minigrid
+MiniGrid
+XLand
 Garena
 Tianshou
 namedtuple

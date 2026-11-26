@@ -95,6 +95,7 @@ _FAMILY_SMOKE_TASKS: dict[str, tuple[str, ...]] = {
     "envpool.procgen": ("CoinrunEasy-v0",),
     "envpool.toy_text": ("Catch-v0",),
     "envpool.vizdoom": ("MyWayHome-v1",),
+    "envpool.xminigrid": ("XLand-MiniGrid-R1-9x9",),
 }
 
 _DYNAMIC_FAMILY_SMOKE_PREFIXES: dict[str, str] = {
@@ -447,6 +448,26 @@ class _MakeTest(absltest.TestCase):
             if task_id.startswith("MiniGrid-")
         )
         self.check_step(task_ids)
+
+    def test_make_xminigrid(self) -> None:
+        from envpool.python.seed_test_utils import (
+            check_seeded_resets,
+            registered_task_ids,
+        )
+        from envpool.xminigrid import RuleSet
+
+        tasks = registered_task_ids("envpool.xminigrid")
+        self.assertLen(tasks, 44)
+        self.check_step(tasks)
+        for task in tasks:
+            varies = not task.startswith("XMiniGrid/MiniGrid-Empty-")
+            check_seeded_resets(
+                self, task, info_keys=("agent_pos",), expected=(varies,) * 3
+            )
+        self.check_render(
+            "XLand-MiniGrid-R2-9x9",
+            ruleset=RuleSet(goal=(1, 3, 2, 0, 0), init_tiles=[(3, 2)]),
+        )
 
     def test_make_babyai(self) -> None:
         task_ids = sorted(
