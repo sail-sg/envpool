@@ -336,7 +336,7 @@ class _GymnaxTest(parameterized.TestCase):
                     return peak, bool(end), bool(limit)
                 if swing and (t + 1) % 5 == 0:
                     state = joint_state(name, state, obs, info)
-            self.fail(f"{name} failed to end")
+        raise AssertionError(f"{name} exceeded the episode limit")
 
     @parameterized.named_parameters(_CASES)
     def test_oracle(self, name: str) -> None:
