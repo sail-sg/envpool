@@ -20,7 +20,7 @@ import pprint
 import sys
 import tempfile
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from pathlib import Path
 from typing import Callable, get_type_hints
 from unittest import mock
@@ -69,6 +69,7 @@ _FAMILY_SMOKE_TASKS: dict[str, tuple[str, ...]] = {
     "envpool.classic_control": ("CartPole-v1",),
     "envpool.craftax": ("Craftax-Symbolic-v1",),
     "envpool.gfootball": ("gfootball/academy_empty_goal_close-v1",),
+    "envpool.gymnax": ("Gymnax/Breakout-MinAtar",),
     "envpool.highway": ("HighwayFast-v0",),
     "envpool.jumanji": ("Game2048-v1",),
     "envpool.marlgrid": (
@@ -448,6 +449,46 @@ class _MakeTest(absltest.TestCase):
             if task_id.startswith("MiniGrid-")
         )
         self.check_step(task_ids)
+
+    def test_make_gymnax(self) -> None:
+        from envpool.python.seed_test_utils import check_seeded_resets
+
+        tasks = [t for t in envpool.list_all_envs() if t.startswith("Gymnax/")]
+        self.assertLen(tasks, 27)
+        self.check_step(tasks)
+        fixed_observations = {
+            "Asterix",
+            "BernoulliBandit",
+            "DeepSea",
+            "DiscountingChain",
+            "FourRooms",
+            "FrozenLake",
+            "GaussianBandit",
+            "MetaMaze",
+            "Pong",
+            "Seaquest",
+            "SimpleBandit",
+            "SpaceInvaders",
+        }
+        for task in tasks:
+            name = task.removeprefix("Gymnax/").split("-")[0]
+            check_seeded_resets(
+                self, task, expected=(name not in fixed_observations,) * 3
+            )
+        self.check_render("Breakout-MinAtar")
+        # Ten guesses for the same packaged image must yield one correct label.
+        with closing(
+            envpool.make_gymnasium(
+                "MNISTBandit-bsuite", num_envs=10, seed=[7] * 10
+            )
+        ) as pool:
+            pool.reset()
+            obs, reward, term, trunc, _ = pool.step(
+                np.arange(10, dtype=np.int32)
+            )
+            np.testing.assert_array_equal(np.sort(reward), [-1] * 9 + [1])
+            self.assertFalse(obs.any())
+            self.assertTrue((term & trunc).all())
 
     def test_make_xminigrid(self) -> None:
         from envpool.python.seed_test_utils import (

@@ -36,6 +36,7 @@ class MountainCarEnvFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     return MakeDict(
+        "terminated"_.Bind(Spec<bool>({})),
         "obs"_.Bind(Spec<float>({2}, {{-1.2, -0.07}, {0.6, 0.07}})));
   }
   template <typename Config>
@@ -46,7 +47,8 @@ class MountainCarEnvFns {
 
 using MountainCarEnvSpec = EnvSpec<MountainCarEnvFns>;
 
-class MountainCarEnv : public Env<MountainCarEnvSpec>, public RenderableEnv {
+class MountainCarEnv : public TimeLimitEnv<MountainCarEnvSpec>,
+                       public RenderableEnv {
  protected:
   const double kMinPos = -1.2;
   const double kMaxPos = 0.6;
@@ -55,19 +57,12 @@ class MountainCarEnv : public Env<MountainCarEnvSpec>, public RenderableEnv {
   const double kGoalPos = 0.5;
   const double kGoalVel = 0;
   const double kGravity = 0.0025;
-  int max_episode_steps_, elapsed_step_;
   double pos_, vel_;
   std::uniform_real_distribution<> dist_;
-  bool done_{true};
 
  public:
   MountainCarEnv(const Spec& spec, int env_id)
-      : Env<MountainCarEnvSpec>(spec, env_id),
-        max_episode_steps_(spec.config["max_episode_steps"_]),
-        elapsed_step_(max_episode_steps_ + 1),
-        dist_(-0.6, -0.4) {}
-
-  bool IsDone() override { return done_; }
+      : TimeLimitEnv<MountainCarEnvSpec>(spec, env_id), dist_(-0.6, -0.4) {}
 
   std::pair<int, int> RenderSize(int width, int height) const override {
     return {width > 0 ? width : 600, height > 0 ? height : 400};
@@ -76,13 +71,10 @@ class MountainCarEnv : public Env<MountainCarEnvSpec>, public RenderableEnv {
   void Reset() override {
     pos_ = dist_(gen_);
     vel_ = 0.0;
-    done_ = false;
-    elapsed_step_ = 0;
     WriteState(0.0);
   }
 
   void Step(const Action& action) override {
-    done_ = (++elapsed_step_ >= max_episode_steps_);
     double act = static_cast<int>(action["action"_]) - 1;
     vel_ += act * kForce - std::cos(3 * pos_) * kGravity;
     if (vel_ < -kMaxSpeed) {
@@ -99,10 +91,7 @@ class MountainCarEnv : public Env<MountainCarEnvSpec>, public RenderableEnv {
     if (pos_ == kMinPos && vel_ < 0) {
       vel_ = 0;
     }
-    if (pos_ >= kGoalPos && vel_ >= kGoalVel) {
-      done_ = true;
-    }
-    WriteState(-1.0);
+    WriteState(-1.0, pos_ >= kGoalPos && vel_ >= kGoalVel);
   }
 
   void Render(int width, int height, int /*camera_id*/,
@@ -111,11 +100,10 @@ class MountainCarEnv : public Env<MountainCarEnvSpec>, public RenderableEnv {
   }
 
  private:
-  void WriteState(float reward) {
-    auto state = Allocate();
+  void WriteState(float reward, bool terminated = false) {
+    auto state = Transition(reward, terminated);
     state["obs"_][0] = static_cast<float>(pos_);
     state["obs"_][1] = static_cast<float>(vel_);
-    state["reward"_] = reward;
   }
 };
 

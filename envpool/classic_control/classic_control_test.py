@@ -128,6 +128,31 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
         for task_id in ("Pendulum-v0", "Pendulum-v1"):
             self.run_deterministic_check(task_id)
 
+    def test_pendulum_speed_limit(self) -> None:
+        for version in (0, 1):
+            env = make_gym(f"Pendulum-v{version}", num_envs=4, seed=10)
+            try:
+                obs, _ = env.reset()
+                for _ in range(200):
+                    torque = np.copysign(2, obs[:, 2:])
+                    prev = np.arctan2(obs[:, 1], obs[:, 0])
+                    obs = env.step(torque)[0]
+                    hit = np.abs(obs[:, 2]) == 8
+                    if hit.any():
+                        angle = np.arctan2(obs[:, 1], obs[:, 0])
+                        delta = (angle - prev + np.pi) % (2 * np.pi) - np.pi
+                        if version == 1:
+                            np.testing.assert_allclose(
+                                delta[hit], 0.05 * obs[hit, 2], atol=1e-6
+                            )
+                        else:
+                            self.assertTrue((np.abs(delta[hit]) > 0.4).all())
+                        break
+                else:
+                    self.fail("Pendulum did not reach the speed limit")
+            finally:
+                env.close()
+
     def test_mountain_car(self) -> None:
         self.run_deterministic_check("MountainCar-v0")
         self.run_deterministic_check("MountainCarContinuous-v0")

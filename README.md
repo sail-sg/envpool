@@ -28,6 +28,7 @@
 - [x] [PGX](https://envpool.readthedocs.io/en/latest/env/pgx.html)
 - [x] [Jumanji](https://envpool.readthedocs.io/en/latest/env/jumanji.html)
 - [x] [Craftax and Craftax Classic](https://envpool.readthedocs.io/en/latest/env/craftax.html)
+- [x] [Gymnax](https://envpool.readthedocs.io/en/latest/env/gymnax.html)
 - [x] [MuJoCo Playground](https://envpool.readthedocs.io/en/latest/env/mujoco_playground.html)
 - [x] [MJLab](https://envpool.readthedocs.io/en/latest/env/mjlab.html)
 

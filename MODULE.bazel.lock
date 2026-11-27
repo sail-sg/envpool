@@ -286,7 +286,7 @@
   "moduleExtensions": {
     "//envpool:workspace0.bzl%repositories": {
       "general": {
-        "bzlTransitiveDigest": "VgW4FUkMio8H6nX5CT53Vj3VnLsDHRZkdcyj9NXLyAU=",
+        "bzlTransitiveDigest": "5/MAMl7Ph6+Ok/ofhuHbueVCeoPUsuzISoCzGGxzCL8=",
         "usagesDigest": "SajRKIR8nOGpEzuKj8QlLVuws2HdnARUg1NP1i0Q7/M=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
@@ -374,6 +374,22 @@
               "sha256": "dfe3e9e0b08d32960bdafbf89e541339ca8908a9a5e7f4a2c986362890d72863",
               "downloaded_file_path": "cmu_2020_dfe3e9e0.h5"
             }
+          },
+          "gymnax_upstream": {
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
+            "attributes": {
+              "type": "tar.gz",
+              "urls": [
+                "https://codeload.github.com/RobertTLange/gymnax/tar.gz/b88dd87ca3917f1723d14016f0b1c9719e893d77"
+              ],
+              "sha256": "f9642fa8cf707eda2e7183bde02c21931407fc0e2b3ed32eefaba56698d0b9dc",
+              "strip_prefix": "gymnax-b88dd87ca3917f1723d14016f0b1c9719e893d77",
+              "build_file": "@@//third_party/gymnax:gymnax.BUILD"
+            }
+          },
+          "mnist": {
+            "repoRuleId": "@@//third_party/gymnax:repo.bzl%_mnist",
+            "attributes": {}
           },
           "mjlab_source": {
             "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
@@ -6258,6 +6274,10 @@
             "https://files.pythonhosted.org/packages/fe/54/4379be86dd74b6ad81551689107360d9a3e18f24d20767a2d5b9253a3f0a/scipy-1.15.3-cp313-cp313-musllinux_1_2_x86_64.whl": "sha256:f77f853d584e72e874d87357ad70f44b437331507d1c311457bed8ed2b956126",
             "https://files.pythonhosted.org/packages/ff/1a/7b74eb6c392fdcb27d414c0e7558a6d0231eb3b6d73571f479bb81ea8794/scipy-1.18.0-cp314-cp314t-macosx_14_0_arm64.whl": "sha256:84031d7b052a54fae2f8632e0ec802073d385476eb9a63079bce6e23ef9283d4",
             "https://files.pythonhosted.org/packages/ff/f6/5779049ed119c5b503b0f3dc6d6f3f68eefc3a9190d4ad4c276f854f051b/scipy-1.16.2-cp314-cp314-macosx_12_0_arm64.whl": "sha256:17d9bb346194e8967296621208fcdfd39b55498ef7d2f376884d5ac47cec1a70"
+          },
+          "seaborn": {
+            "https://files.pythonhosted.org/packages/83/11/00d3c3dfc25ad54e731d91449895a79e4bf2384dc3ac01809010ba88f6d5/seaborn-0.13.2-py3-none-any.whl": "sha256:636f8336facf092165e27924f223d3c62ca560b1f2bb5dff7ab7fad265361987",
+            "https://files.pythonhosted.org/packages/86/59/a451d7420a77ab0b98f7affa3a1d78a313d2f7281a57afb1a34bae8ab412/seaborn-0.13.2.tar.gz": "sha256:93e60a40988f4d65e9f4885df477e2fdaff6b73a9ded434c1ab356dd57eefff7"
           },
           "secretstorage": {
             "https://files.pythonhosted.org/packages/1c/03/e834bcd866f2f8a49a85eaff47340affa3bfa391ee9912a952a1faa68c7b/secretstorage-3.5.0.tar.gz": "sha256:f04b8e4689cbce351744d5537bf6b1329c6fc68f91fa666f60a380edddcd11be",

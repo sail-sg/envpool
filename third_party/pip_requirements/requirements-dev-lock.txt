@@ -75,6 +75,7 @@ pyparsing==3.3.2
 python-dateutil==2.9.0.post0
 requests==2.34.2
 scipy==1.18.0
+seaborn==0.13.2
 setuptools==84.0.0
 six==1.17.0
 svgwrite==1.4.3

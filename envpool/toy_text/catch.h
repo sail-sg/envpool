@@ -20,9 +20,12 @@
 
 #include <cmath>
 #include <random>
+#include <stdexcept>
+#include <utility>
 
 #include "envpool/core/async_envpool.h"
 #include "envpool/core/env.h"
+#include "envpool/utils/grid_render.h"
 
 namespace toy_text {
 
@@ -33,8 +36,13 @@ class CatchEnvFns {
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs"_.Bind(
-        Spec<float>({conf["height"_], conf["width"_]}, {0.0, 1.0})));
+    if (conf["height"_] < 2 || conf["width"_] < 1) {
+      throw std::invalid_argument(
+          "Catch needs at least two rows and one column");
+    }
+    return MakeDict("terminated"_.Bind(Spec<bool>({})),
+                    "obs"_.Bind(Spec<float>({conf["height"_], conf["width"_]},
+                                            {0.0, 1.0})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -44,26 +52,22 @@ class CatchEnvFns {
 
 using CatchEnvSpec = EnvSpec<CatchEnvFns>;
 
-class CatchEnv : public Env<CatchEnvSpec> {
+class CatchEnv : public TimeLimitEnv<CatchEnvSpec>, public RenderableEnv {
  protected:
   int x_, y_, height_, width_, paddle_;
   std::uniform_int_distribution<> dist_;
-  bool done_{true};
 
  public:
   CatchEnv(const Spec& spec, int env_id)
-      : Env<CatchEnvSpec>(spec, env_id),
+      : TimeLimitEnv<CatchEnvSpec>(spec, env_id),
         height_(spec.config["height"_]),
         width_(spec.config["width"_]),
         dist_(0, width_ - 1) {}
-
-  bool IsDone() override { return done_; }
 
   void Reset() override {
     x_ = 0;
     y_ = dist_(gen_);
     paddle_ = width_ / 2;
-    done_ = false;
     WriteState(0.0);
   }
 
@@ -78,18 +82,32 @@ class CatchEnv : public Env<CatchEnvSpec> {
       paddle_ = width_ - 1;
     }
     if (++x_ == height_ - 1) {
-      done_ = true;
       reward = y_ == paddle_ ? 1.0 : -1.0;
     }
     WriteState(reward);
   }
 
+  std::pair<int, int> RenderSize(int width, int height) const override {
+    return {width > 0 ? width : 40 * width_,
+            height > 0 ? height : 40 * height_};
+  }
+
+  void Render(int width, int height, int /*camera_id*/,
+              unsigned char* rgb) override {
+    if (CurrentStep() < 0) {
+      throw std::runtime_error("reset before rendering");
+    }
+    rendering::RenderBoard(
+        height_, width_, {},
+        {{(height_ - 1) * width_ + paddle_, 'P'}, {x_ * width_ + y_, 'B'}},
+        width, height, rgb);
+  }
+
  private:
   void WriteState(float reward) {
-    auto state = Allocate();
+    auto state = Transition(reward, x_ == height_ - 1);
     state["obs"_](x_, y_) = 1.0f;
     state["obs"_](height_ - 1, paddle_) = 1.0f;
-    state["reward"_] = reward;
   }
 };
 

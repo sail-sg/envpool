@@ -31,6 +31,7 @@ cc_library(
     ],
     deps = [
         "//envpool/core:async_envpool",
+        "//envpool/utils:grid_render",
     ],
 )
 

@@ -37,8 +37,10 @@ class CartPoleEnvFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     float inf = std::numeric_limits<float>::infinity();
-    return MakeDict("obs"_.Bind(Spec<float>(
-        {4}, {{-4.8, -inf, -M_PI / 7.5, -inf}, {4.8, inf, M_PI / 7.5, inf}})));
+    return MakeDict(
+        "terminated"_.Bind(Spec<bool>({})),
+        "obs"_.Bind(Spec<float>({4}, {{-4.8, -inf, -M_PI / 7.5, -inf},
+                                      {4.8, inf, M_PI / 7.5, inf}})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -48,7 +50,7 @@ class CartPoleEnvFns {
 
 using CartPoleEnvSpec = EnvSpec<CartPoleEnvFns>;
 
-class CartPoleEnv : public Env<CartPoleEnvSpec>, public RenderableEnv {
+class CartPoleEnv : public TimeLimitEnv<CartPoleEnvSpec>, public RenderableEnv {
  protected:
   const double kGravity = 9.8;
   const double kMassCart = 1.0;
@@ -61,19 +63,13 @@ class CartPoleEnv : public Env<CartPoleEnvSpec>, public RenderableEnv {
   const double kThetaThresholdRadians = 12 * 2 * M_PI / 360;
   const double kXThreshold = 2.4;
   const double kInitRange = 0.05;
-  int max_episode_steps_, elapsed_step_;
   double x_, x_dot_, theta_, theta_dot_;
   std::uniform_real_distribution<> dist_;
-  bool done_{true};
 
  public:
   CartPoleEnv(const Spec& spec, int env_id)
-      : Env<CartPoleEnvSpec>(spec, env_id),
-        max_episode_steps_(spec.config["max_episode_steps"_]),
-        elapsed_step_(max_episode_steps_ + 1),
+      : TimeLimitEnv<CartPoleEnvSpec>(spec, env_id),
         dist_(-kInitRange, kInitRange) {}
-
-  bool IsDone() override { return done_; }
 
   std::pair<int, int> RenderSize(int width, int height) const override {
     return {width > 0 ? width : 600, height > 0 ? height : 400};
@@ -84,13 +80,10 @@ class CartPoleEnv : public Env<CartPoleEnvSpec>, public RenderableEnv {
     x_dot_ = dist_(gen_);
     theta_ = dist_(gen_);
     theta_dot_ = dist_(gen_);
-    done_ = false;
-    elapsed_step_ = 0;
     WriteState(0.0);
   }
 
   void Step(const Action& action) override {
-    done_ = (++elapsed_step_ >= max_episode_steps_);
     int act = action["action"_];
     double force = act == 1 ? kForceMag : -kForceMag;
     double costheta = std::cos(theta_);
@@ -107,11 +100,8 @@ class CartPoleEnv : public Env<CartPoleEnvSpec>, public RenderableEnv {
     x_dot_ += kTau * x_acc;
     theta_ += kTau * theta_dot_;
     theta_dot_ += kTau * theta_acc;
-    if (x_ < -kXThreshold || x_ > kXThreshold ||
-        theta_ < -kThetaThresholdRadians || theta_ > kThetaThresholdRadians) {
-      done_ = true;
-    }
-    WriteState(1.0);
+    WriteState(1.0, std::abs(x_) > kXThreshold ||
+                        std::abs(theta_) > kThetaThresholdRadians);
   }
 
   void Render(int width, int height, int /*camera_id*/,
@@ -120,13 +110,12 @@ class CartPoleEnv : public Env<CartPoleEnvSpec>, public RenderableEnv {
   }
 
  private:
-  void WriteState(float reward) {
-    auto state = Allocate();
+  void WriteState(float reward, bool terminated = false) {
+    auto state = Transition(reward, terminated);
     state["obs"_][0] = static_cast<float>(x_);
     state["obs"_][1] = static_cast<float>(x_dot_);
     state["obs"_][2] = static_cast<float>(theta_);
     state["obs"_][3] = static_cast<float>(theta_dot_);
-    state["reward"_] = reward;
   }
 };
 

@@ -93,6 +93,7 @@ stable version through `envpool.readthedocs.io/en/stable/
    env/dm_control
    env/dm_control_locomotion
    env/gfootball
+   env/gymnax
    env/highway
    env/jumanji
    env/craftax
