@@ -99,6 +99,7 @@ stable version through `envpool.readthedocs.io/en/stable/
    env/marlgrid
    env/mpe2
    env/minigrid
+   env/xminigrid
    env/gymnasium_robotics
    env/metaworld
    env/mujoco_gym

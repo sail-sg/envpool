@@ -20,6 +20,12 @@ load("//envpool:requirements.bzl", "requirement")
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
+    name = "tile_render",
+    hdrs = ["impl/tile_render.h"],
+    deps = ["//envpool/core:logging"],
+)
+
+cc_library(
     name = "minigrid_env",
     srcs = [
         "impl/babyai_core.cc",
@@ -49,6 +55,7 @@ cc_library(
         "minigrid.h",
     ],
     deps = [
+        ":tile_render",
         "//envpool/core:async_envpool",
         "//envpool/core:logging",
         "@opencv",

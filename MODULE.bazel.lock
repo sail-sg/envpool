@@ -286,12 +286,24 @@
   "moduleExtensions": {
     "//envpool:workspace0.bzl%repositories": {
       "general": {
-        "bzlTransitiveDigest": "14ldBlJff9XmUcVE+6NRIudsJLgRSDbcpzlzryP2zzg=",
+        "bzlTransitiveDigest": "VgW4FUkMio8H6nX5CT53Vj3VnLsDHRZkdcyj9NXLyAU=",
         "usagesDigest": "SajRKIR8nOGpEzuKj8QlLVuws2HdnARUg1NP1i0Q7/M=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
         ],
         "generatedRepoSpecs": {
+          "xminigrid_upstream": {
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
+            "attributes": {
+              "type": "tar.gz",
+              "sha256": "31474b6689d1e8f68d87bdf08df2e68a63c7c2515d82f7dfb16b6c859c221c56",
+              "strip_prefix": "xland-minigrid-0d306d1414dcb6e451358d94e7d9a91879462ee1",
+              "urls": [
+                "https://codeload.github.com/dunnolab/xland-minigrid/tar.gz/0d306d1414dcb6e451358d94e7d9a91879462ee1"
+              ],
+              "build_file": "@@//third_party/xminigrid:xminigrid.BUILD"
+            }
+          },
           "mpe2_upstream": {
             "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
             "attributes": {
