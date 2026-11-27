@@ -23,7 +23,7 @@ from envpool.registration import make_gymnasium
 from envpool.xminigrid.oracle import (
     RECIPE,
     oracle_ruleset,
-    recipe_actions,
+    solution_steps,
     synchronize_reset,
 )
 
@@ -71,8 +71,8 @@ def main(output: str) -> None:
                 )
 
         capture(0, "Initial objects")
-        for action in recipe_actions(info):
-            _, reward, term, _, _ = pool.step(np.array([action], np.int32))
+        for action, result in solution_steps(pool, info):
+            _, reward, term, _, _ = result
             t = step(p, t, np.int32(action))
             if action == 4:
                 if term[0]:

@@ -24,24 +24,6 @@
 namespace xminigrid {
 namespace {
 
-enum Predicate : uint8_t {
-  kNever,
-  kHold,
-  kStandOn,
-  kAgentNear,
-  kTileNear,
-  kTileAt,
-  kAgentAt,
-  kPairUp,
-  kPairRight,
-  kPairDown,
-  kPairLeft,
-  kAgentUp,
-  kAgentRight,
-  kAgentDown,
-  kAgentLeft
-};
-
 enum : uint8_t { kForward, kRight, kLeft, kPickUp, kPutDown, kToggle };
 
 // Production rules share a subset of the goal predicates. Their last
@@ -116,16 +98,30 @@ void XMiniGridEnv::Reset() {
   WriteState(false, false);
 }
 
+// In 0.9.3 negative interaction indices wrap. Past the bottom or right
+// edge, the target reads as the agent's cell and neighbours read as empty.
+// A local overflow tile supplies that value and discards writes.
+Tile& XMiniGridEnv::InteractionTile(Pos p, Tile& overflow) {
+  if (p.y < 0) {
+    p.y += spec_.task.height;
+  }
+  if (p.x < 0) {
+    p.x += spec_.task.width;
+  }
+  return Contains(p) ? At(p) : overflow;
+}
+
 Pos XMiniGridEnv::Act(int action) {
   if (action == kRight || action == kLeft) {
     direction_ = (direction_ + (action == kRight ? 1 : 3)) % 4;
     return agent_;
   }
   Pos front = agent_.Shift(direction_);
-  if (!Contains(front)) {
+  if (action == kForward && !Contains(front)) {
     return agent_;
   }
-  Tile& tile = At(front);
+  Tile clipped = At(agent_);
+  Tile& tile = InteractionTile(front, clipped);
   int type = tile[0];
   switch (action) {
     case kForward:
@@ -202,14 +198,12 @@ bool XMiniGridEnv::Match(const Goal& condition, int action, Pos target,
   // For directed pairs B must lie in the specified compass direction
   // from A, regardless of which tile was dropped. A single rule can
   // transform more than one neighbour using the original target tile.
-  const Tile center = At(target);
+  Tile clipped = At(agent_);
+  Tile& center = InteractionTile(target, clipped);
   bool found = false;
   for (int d = 0; d < 4; ++d) {
-    Pos p = target.Shift(d);
-    if (!Contains(p)) {
-      continue;
-    }
-    Tile& other = At(p);
+    Tile empty{};
+    Tile& other = InteractionTile(target.Shift(d), empty);
     bool matches =
         pair ? ((center == a && other == b &&
                  (op == kTileNear || op == kPairUp + d)) ||
@@ -226,7 +220,7 @@ bool XMiniGridEnv::Match(const Goal& condition, int action, Pos target,
     found = true;
   }
   if (found && pair) {
-    At(target) = kGround;
+    center = kGround;
   }
   return found;
 }

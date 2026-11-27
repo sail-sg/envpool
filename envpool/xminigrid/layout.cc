@@ -118,7 +118,7 @@ void XMiniGridEnv::Generate() {
   grid_ = spec_.base_grid;
   direction_ = draw(0, 4);
   goal_ = {};
-  constexpr Goal reach_exit{2, kGoal, kGreen};
+  constexpr Goal reach_exit{kStandOn, kExit[0], kExit[1]};
 
   switch (t.layout) {
     case Layout::kR1:
@@ -203,12 +203,12 @@ void XMiniGridEnv::Generate() {
         At({h - 2, w - 2}) = kExit;
         goal_ = reach_exit;
       } else if (t.layout == Layout::kUnlock) {
-        goal_ = {5, kDoorOpen, lock, static_cast<uint8_t>(y),
+        goal_ = {kTileAt, kDoorOpen, lock, static_cast<uint8_t>(y),
                  static_cast<uint8_t>(x)};
       } else {
         Tile target = object(5);
         At({draw(1, h - 1), draw(x + 1, w - 1)}) = target;
-        goal_ = {1, target[0], target[1]};
+        goal_ = {kHold, target[0], target[1]};
       }
       At({y, x}) = {kDoorLocked, lock};
       At({draw(1, h - 1), draw(1, x)}) = {kKey, lock};

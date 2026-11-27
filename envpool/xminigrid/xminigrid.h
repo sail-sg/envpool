@@ -81,6 +81,23 @@ enum Color : uint8_t {
   kBrown,
   kPink
 };
+enum Predicate : uint8_t {
+  kNever,
+  kHold,
+  kStandOn,
+  kAgentNear,
+  kTileNear,
+  kTileAt,
+  kAgentAt,
+  kPairUp,
+  kPairRight,
+  kPairDown,
+  kPairLeft,
+  kAgentUp,
+  kAgentRight,
+  kAgentDown,
+  kAgentLeft
+};
 using Tile = std::array<uint8_t, 2>;
 using Goal = std::array<uint8_t, 5>;
 using Rule = std::array<uint8_t, 7>;
@@ -169,6 +186,7 @@ class XMiniGridEnv : public Env<XMiniGridSpec>, public RenderableEnv {
     return p.y >= 0 && p.y < spec_.task.height && p.x >= 0 &&
            p.x < spec_.task.width;
   }
+  Tile& InteractionTile(Pos p, Tile& overflow);
   Pos ViewCell(int row, int col) const;
   void Generate();
   void WriteState(bool success, bool terminated);

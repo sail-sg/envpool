@@ -11,11 +11,13 @@
 """Reset-time state transfer for XMiniGrid tests and render examples."""
 
 from collections import deque
+from collections.abc import Iterator
 from typing import Any
 
 import jax
 import jax.numpy as jnp
 import numpy as np
+from xminigrid.core.constants import Tiles
 from xminigrid.core.goals import AgentHoldGoal, TileOnPositionGoal
 from xminigrid.core.observation import transparent_field_of_view
 from xminigrid.types import RuleSet as OracleRuleSet
@@ -41,41 +43,71 @@ def oracle_ruleset(task: RuleSet) -> Any:
     )
 
 
-def recipe_actions(info: dict[str, Any]) -> list[int]:
-    """Route the agent between the four interactions of the one-room example."""
+def _route(info: dict[str, Any], target: np.ndarray, action: int) -> list[int]:
+    """Find a route ending with the requested interaction at a target cell."""
     grid = info["grid"][0, ..., 0]
-    floor = grid == 1
     y, x = info["agent_pos"][0]
     d = int(info["direction"][0])
     directions = ((-1, 0), (0, 1), (1, 0), (0, -1))
-    actions: list[int] = []
-    # Pick up the pyramid, drop by the square, pick up the product
-    # where the square was, and drop by the green ball.
-    for tile, action in ((5, 3), (4, 4), (4, 3), (3, 4)):
-        ((ty, tx),) = np.argwhere(grid == tile)
-        queue = deque([(y, x, d, actions)])
-        seen = set()
-        while queue:
-            y, x, d, path = queue.popleft()
-            if (y, x, d) in seen:
-                continue
-            seen.add((y, x, d))
-            dy, dx = directions[d]
-            front = y + dy, x + dx
-            distance = abs(front[0] - ty) + abs(front[1] - tx)
-            if (action == 3 and distance == 0) or (
-                action == 4 and floor[front] and distance == 1
-            ):
-                actions = [*path, action]
-                floor[front] = True
-                break
-            if floor[front]:
-                queue.append((*front, d, [*path, 0]))
-            queue.append((y, x, (d + 1) % 4, [*path, 1]))
-            queue.append((y, x, (d - 1) % 4, [*path, 2]))
-        else:
-            raise ValueError("Unreachable recipe ingredient")
-    return actions
+    queue: deque[tuple[int, int, int, list[int]]] = deque([(y, x, d, [])])
+    seen = set()
+    while queue:
+        y, x, d, path = queue.popleft()
+        if (y, x, d) in seen:
+            continue
+        seen.add((y, x, d))
+        dy, dx = directions[d]
+        front = y + dy, x + dx
+        tile = grid[front]
+        if target[front] and (action != 4 or tile == Tiles.FLOOR):
+            return [*path, action]
+        if tile in (Tiles.FLOOR, Tiles.DOOR_OPEN):
+            queue.append((*front, d, [*path, 0]))
+        elif tile == Tiles.DOOR_CLOSED:
+            queue.append((*front, d, [*path, 5, 0]))
+        queue.append((y, x, (d + 1) % 4, [*path, 1]))
+        queue.append((y, x, (d - 1) % 4, [*path, 2]))
+    raise ValueError(f"Unreachable target for action {action}")
+
+
+def solution_steps(
+    pool: Any, info: dict[str, Any]
+) -> Iterator[tuple[int, Any]]:
+    """Solve the recipe or a locked room, routing from each updated grid."""
+    name = pool.config["task"]
+    grid = info["grid"][0, ..., 0]
+    rows, cols = np.indices(grid.shape)
+    if name.startswith("XLand-"):
+
+        def beside(tile: int) -> np.ndarray:
+            ((y, x),) = np.argwhere(grid == tile)
+            return abs(rows - y) + abs(cols - x) == 1
+
+        # The red ball appears at the original square's position.
+        plan = [
+            (grid == Tiles.PYRAMID, 3),
+            (beside(Tiles.SQUARE), 4),
+            (grid == Tiles.SQUARE, 3),
+            (beside(Tiles.BALL), 4),
+        ]
+    else:
+        lock = grid == Tiles.DOOR_LOCKED
+        ((y, x),) = np.argwhere(lock)
+        away = cols < x - 1  # Keep the path through the doorway clear.
+        plan = []
+        if "Blocked" in name:
+            plan.extend([((rows == y) & (cols == x - 1), 3), (away, 4)])
+        plan.extend([(grid == Tiles.KEY, 3), (lock, 5)])
+        if "PickUp" in name:
+            plan.extend([(away, 4), ((cols > x) & (grid > Tiles.WALL), 3)])
+        elif name != "MiniGrid-Unlock":
+            plan.append((grid == Tiles.GOAL, 0))
+
+    for target, action in plan:
+        for move in _route(info, target, action):
+            result = pool.step(np.array([move], np.int32))
+            info = result[-1]
+            yield move, result
 
 
 def synchronize_reset(name: str, t: Any, info: dict[str, Any]) -> Any:

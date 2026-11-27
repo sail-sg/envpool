@@ -136,6 +136,11 @@ A pickup checks what the agent holds. A forward move checks what the
 agent stands on or next to. A put-down checks directed agent adjacency
 and tile pairs, even if the cell in front stays the same.
 
+In version 0.9.3, a neighbor beyond the top or left edge wraps to the
+opposite edge. Beyond the bottom or right edge, rules and goals see an
+empty neighbor and writes outside the grid are discarded. Forward
+movement stops at every edge, even if a rule removes an outer wall.
+
 Goals 1–6 check holding a tile, standing on a tile, agent adjacency, tile
 adjacency, a tile at a position and the agent at a position, respectively.
 Goals 7–10 and 11–14 check directed tile and agent adjacency. Operation 0
@@ -147,7 +152,9 @@ Validation
 
 For each ID, tests transfer the initial grid and agent pose to the official
 environment and derive any sampled goal or memory cue from the grid. Both
-implementations then run independently to the end of the episode. Native
+implementations then run independently to the end of the episode. The
+tests also solve all eight tasks with a locked door, including moving
+the blocker and putting down the key to pick up the target object. Native
 tests separately check the sampled components across seeds, slots and
 resets, including object locations, door colors and goals.
 

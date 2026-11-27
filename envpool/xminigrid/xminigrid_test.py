@@ -18,6 +18,7 @@ import jax
 import numpy as np
 import xminigrid
 from absl.testing import absltest, parameterized
+from xminigrid.core.constants import Tiles
 
 import envpool.xminigrid.registration  # noqa: F401
 from envpool.registration import make_dm, make_gymnasium, make_spec, registry
@@ -25,7 +26,7 @@ from envpool.xminigrid import RuleSet
 from envpool.xminigrid.oracle import (
     RECIPE,
     oracle_ruleset,
-    recipe_actions,
+    solution_steps,
     synchronize_reset,
 )
 
@@ -94,7 +95,7 @@ class _OracleTest(parameterized.TestCase):
         initial: Any,
         obs: np.ndarray,
         info: Any,
-        actions: Iterable[int],
+        actions: Iterable[int] | None = None,
     ) -> float:
         name = pool.config["task"]
         np.testing.assert_array_equal(
@@ -105,10 +106,14 @@ class _OracleTest(parameterized.TestCase):
         np.testing.assert_array_equal(obs[0], t.observation, strict=True)
         self._check_frame(pool, env, p, t)
         step = jax.jit(env.step)
-        for i, a in enumerate(actions, 1):
-            obs, reward, terminated, truncated, info = pool.step(
-                np.array([a], np.int32)
-            )
+        locks = info["grid"][0, ..., 0] == Tiles.DOOR_LOCKED
+        moves = (
+            solution_steps(pool, info)
+            if actions is None
+            else ((a, pool.step(np.array([a], np.int32))) for a in actions)
+        )
+        for i, (a, result) in enumerate(moves, 1):
+            obs, reward, terminated, truncated, info = result
             t = step(p, t, np.int32(a))
             for actual, expected in (
                 (obs[0], t.observation),
@@ -131,6 +136,9 @@ class _OracleTest(parameterized.TestCase):
             if i == 13 or done:
                 self._check_frame(pool, env, p, t)
             if done:
+                if actions is None:
+                    opened = info["grid"][0, ..., 0] == Tiles.DOOR_OPEN
+                    self.assertTrue(opened[locks].all())
                 return float(reward[0])
         raise AssertionError("Action sequence ended before the episode")
 
@@ -163,14 +171,61 @@ class _OracleTest(parameterized.TestCase):
                     self.assertEqual(score > 0, correct)
                 return
             obs, info = pool.reset()
-            if name == _ROOM:
-                score = self._rollout(
-                    pool, env, p, initial, obs, info, recipe_actions(info)
-                )
+            if name == "MiniGrid-BlockedUnlockPickUp":
+                # The blocker can cover the key or match the goal itself.
+                # Choose a layout that requires clearing and opening the door.
+                for _ in range(32):
+                    grid = info["grid"][0]
+                    ((y, x),) = np.argwhere(grid[..., 0] == Tiles.DOOR_LOCKED)
+                    blocker = grid[y, x - 1]
+                    if (
+                        np.any(grid[..., 0] == Tiles.KEY)
+                        and np.count_nonzero((grid == blocker).all(-1)) == 1
+                    ):
+                        break
+                    obs, info = pool.reset()
+                else:
+                    self.fail("No layout requiring the locked door")
+            if name == _ROOM or any(
+                task in name for task in ("DoorKey", "LockedRoom", "Unlock")
+            ):
+                score = self._rollout(pool, env, p, initial, obs, info)
                 self.assertGreater(score, 0)
                 obs, info = pool.reset()
             actions = np.random.default_rng(42).integers(0, 6, p.max_steps)
             self._rollout(pool, env, p, initial, obs, info, actions)
+
+    def test_outer_wall_interactions(self) -> None:
+        env, base = xminigrid.make(_ROOM)
+        reset = jax.jit(env.reset)
+        wall, empty, ball = (2, 6), (0, 0), (3, 1)
+        # Check a directed pair across the wall. When a rule consumes it,
+        # step onto the edge, pick up, try to walk past it, and put down.
+        probe = [4, 0, 3, 0, 4]
+        base = base.replace(max_steps=base.width + len(probe))
+        pool: Any
+        with closing(
+            make_gymnasium(
+                _ROOM, max_episode_steps=base.max_steps, render_mode="rgb_array"
+            )
+        ) as pool:
+            for d, outside in enumerate((wall, empty, empty, wall)):
+                goal = (7 + d, *wall, *outside)
+                consume = (4 + d, *wall, *outside, *ball)
+                # Supply a key if the pickup beyond the edge found nothing.
+                equip = (1, *empty, 7, 2, 0, 0)
+                for rules in ([], [consume, equip]):
+                    task = RuleSet(goal=goal, rules=rules)
+                    pool.set_ruleset(task)
+                    p = base.replace(ruleset=oracle_ruleset(task))
+                    initial = reset(p, jax.random.key(3))
+                    obs, info = pool.reset()
+                    turns = (d - int(info["direction"][0])) % 4
+                    actions = [1] * turns + [0] * (p.width - turns) + probe
+                    score = self._rollout(
+                        pool, env, p, initial, obs, info, actions
+                    )
+                    self.assertEqual(score > 0, not rules)
 
     def test_rule_chains_and_directions(self) -> None:
         env, base = xminigrid.make(_ROOM)
