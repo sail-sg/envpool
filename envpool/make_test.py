@@ -454,7 +454,7 @@ class _MakeTest(absltest.TestCase):
         from envpool.python.seed_test_utils import check_seeded_resets
 
         tasks = [t for t in envpool.list_all_envs() if t.startswith("Gymnax/")]
-        self.assertLen(tasks, 27)
+        self.assertLen(tasks, 20)
         self.check_step(tasks)
         fixed_observations = {
             "Asterix",
@@ -462,7 +462,6 @@ class _MakeTest(absltest.TestCase):
             "DeepSea",
             "DiscountingChain",
             "FourRooms",
-            "FrozenLake",
             "GaussianBandit",
             "MetaMaze",
             "Pong",

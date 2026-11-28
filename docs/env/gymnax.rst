@@ -1,12 +1,11 @@
 Gymnax
 ======
 
-EnvPool runs all 27 tasks from
+EnvPool adds 20 native tasks from
 `Gymnax 1.1.0 <https://github.com/RobertTLange/gymnax/tree/b88dd87ca3917f1723d14016f0b1c9719e893d77>`_
-in C++ on the CPU. Use ``Gymnax/<task ID>`` with the Gymnasium or
-``dm_env`` API. The 22 names ending in ``-MinAtar``, ``-bsuite`` or
-``-misc`` also work without the prefix. The five classic control names
-on their own select EnvPool's :doc:`classic_control` variants.
+that run in C++ on the CPU. Use ``Gymnax/<task ID>`` or the short
+task ID with the Gymnasium or ``dm_env`` API. Seven other tasks use
+existing EnvPool IDs.
 
 Try Space Invaders
 ------------------
@@ -51,17 +50,11 @@ earlier. RGB indicates support for ``rgb_array`` and ``human`` rendering.
 ============================  ================  ========  ======  ===
 ID after ``Gymnax/``          Observation       Actions   Limit   RGB
 ============================  ================  ========  ======  ===
-``CartPole-v1``               ``(4,)``          2         500     Yes
-``Acrobot-v1``                ``(6,)``          3         500     Yes
-``Pendulum-v1``               ``(3,)``          1D        200     Yes
-``MountainCar-v0``            ``(2,)``          3         200     Yes
-``MountainCarContinuous-v0``  ``(2,)``          1D        999     Yes
 ``Asterix-MinAtar``           ``(10, 10, 4)``   5         1000    Yes
 ``Breakout-MinAtar``          ``(10, 10, 4)``   3         1000    Yes
 ``Freeway-MinAtar``           ``(10, 10, 7)``   3         2500    Yes
 ``Seaquest-MinAtar``          ``(10, 10, 10)``  6         1000    Yes
 ``SpaceInvaders-MinAtar``     ``(10, 10, 6)``   4         1000    Yes
-``Catch-bsuite``              ``(10, 5)``       3         1000    Yes
 ``DeepSea-bsuite``            ``(8, 8)``        2         8       —
 ``DiscountingChain-bsuite``   ``(2,)``          5         100     —
 ``MemoryChain-bsuite``        ``(3,)``          2         1000    —
@@ -70,7 +63,6 @@ ID after ``Gymnax/``          Observation       Actions   Limit   RGB
 ``UmbrellaChain-bsuite``      ``(3,)``          2         100     —
 ``BernoulliBandit-misc``      ``(4,)``          2         100     —
 ``FourRooms-misc``            ``(4,)``          4         500     Yes
-``FrozenLake-misc``           ``()``            4         100     —
 ``GaussianBandit-misc``       ``(4,)``          2         100     —
 ``MetaMaze-misc``             ``(15,)``         4         200     Yes
 ``PointRobot-misc``           ``(6,)``          2D        100     Yes
@@ -79,6 +71,18 @@ ID after ``Gymnax/``          Observation       Actions   Limit   RGB
 ``Snake-misc``                ``(10, 10, 3)``   4         1000    —
 ``Swimmer-misc``              ``(16,)``         2D        500     —
 ============================  ================  ========  ======  ===
+
+Tasks with existing EnvPool IDs
+-------------------------------
+
+Use ``CartPole-v1``, ``Acrobot-v1``, ``Pendulum-v1``, ``MountainCar-v0``
+and ``MountainCarContinuous-v0`` directly. For Gymnax's continuous
+mountain car dynamics, pass ``stop_at_left_wall=False`` to keep the
+negative velocity on hitting the wall. See :doc:`classic_control`.
+
+For ``Catch-bsuite``, use ``Catch-v0``. For ``FrozenLake-misc``, use
+``FrozenLake-v1`` on the 4 by 4 map or ``FrozenLake8x8-v1`` on the
+8 by 8 map. See :doc:`toy_text`.
 
 Actions and observations
 ------------------------
@@ -97,15 +101,11 @@ Pass ``use_minimal_action_set=False`` to use all six actions in
 stay, up, down. The channels encode objects and their movement trails.
 
 ``FourRooms``, ``MetaMaze`` and ``Snake`` use up, right, down, left.
-``FrozenLake`` uses left, down, right, up. Pass ``is_slippery=False``
-for deterministic moves or ``size=8, max_episode_steps=200`` for
-Gymnax's larger map. The sampled move's probability is in
-``info["p"]``. ``Snake`` and ``Catch`` accept
-``height`` and ``width``. The snake's channels show its body, head and
-apple. ``info["length"]`` includes the head.
+``Snake`` accepts ``height`` and ``width``. Its channels show the
+body, head and apple. ``info["length"]`` includes the head.
 
-Observations are ``float32`` except for the ``int32`` cell index in
-``FrozenLake`` and the agent and goal coordinates in ``FourRooms``.
+Observations are ``float32`` except for the ``int32`` agent and goal
+coordinates in ``FourRooms``.
 Space bounds include negative memory cues, signed image pixels, Gaussian
 rewards and the reward of 10 in ``MetaMaze``.
 
@@ -120,8 +120,6 @@ Task termination and time limits are independent. Both flags can be
 true. The ``dm_env`` discount is zero on termination and one on a
 timeout alone.
 
-* ``Gymnax/MountainCarContinuous-v0`` retains negative velocity at
-  the left wall. ``MountainCarContinuous-v0`` stops at the wall.
 * ``DeepSea`` uses the fixed action mapping from the pinned version.
   In ``MemoryChain`` each step gives the observation from before the
   action. Recall the initial cue on the sixth action.
@@ -146,10 +144,8 @@ reward and end flags. Separate tests check the draws, their distributions
 and their independence across seeds, consecutive resets and parallel
 slots. Each slot uses EnvPool's native random number generator.
 
-Acrobot and Pendulum have uninterrupted full episodes and additional
-fast swings. Rapid rotation amplifies rounding differences. On the swing
-trajectories the tests compare every output before copying joint angles
-and velocities again every five steps. All physics comparisons use
-absolute and relative tolerances of ``2e-5`` and ``1e-5``. Tests also
-check selected RGB frames against the same scene in Gymnax, allowing
+Continuous control tasks use absolute and relative tolerances of
+``2e-5`` and ``1e-5`` to account for rounding during single-precision
+integration over a full episode. For all nine tasks with RGB rendering,
+tests compare selected frames against the same scene in Gymnax, allowing
 for font and edge differences while checking the positions of objects.

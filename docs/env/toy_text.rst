@@ -12,8 +12,9 @@ Catch-v0
 `bsuite catch source code
 <https://github.com/deepmind/bsuite/blob/master/bsuite/environments/catch.py>`_
 
-The agent must move a paddle to intercept falling balls. Falling balls only
-move downwards on the column they are in.
+Move the paddle to intercept a ball falling straight down its column.
+Set ``height`` and ``width`` to change the board size. The ``rgb_array``
+and ``human`` render modes mark the ball with B and the paddle with P.
 
 
 FrozenLake-v1, FrozenLake8x8-v1
@@ -27,6 +28,10 @@ the grid are walkable, and others lead to the agent falling into the water.
 Additionally, the movement direction of the agent is uncertain and only
 partially depends on the chosen direction. The agent is rewarded for finding a
 walkable path to a goal tile.
+
+Actions 0 through 3 move left, down, right and up. Pass
+``is_slippery=False`` for deterministic moves. ``info["prob"]`` gives
+the probability of the sampled move.
 
 The difference between ``FrozenLake-v1`` and ``FrozenLake8x8-v1`` is that the
 former has ``size`` 4, ``max_episode_steps`` 100 with 0.7 reward threshold,

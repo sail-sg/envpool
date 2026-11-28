@@ -42,12 +42,9 @@ class FrozenLakeEnvFns {
     if (size != 4 && size != 8) {
       throw std::invalid_argument("FrozenLake size must be 4 or 8");
     }
-    return MakeDict("obs"_.Bind(Spec<int>({-1}, {0, size * size - 1})),
-#ifdef ENVPOOL_TEST
-                    "info:slip"_.Bind(Spec<int>({})),
-#endif
-                    "info:p"_.Bind(Spec<float>({})),
-                    "terminated"_.Bind(Spec<bool>({})));
+    return MakeDict(TerminationSpec(conf),
+                    "obs"_.Bind(Spec<int>({-1}, {0, size * size - 1})),
+                    "info:prob"_.Bind(Spec<float>({-1})));
   }
   template <typename Config>
   static decltype(auto) ActionSpec(const Config& conf) {
@@ -79,7 +76,7 @@ class FrozenLakeEnv : public TimeLimitEnv<FrozenLakeEnvSpec> {
 
   void Reset() override {
     x_ = y_ = 0;
-    WriteState(1.0f, 0);
+    WriteState(1.0f);
   }
 
   void Step(const Action& action) override {
@@ -97,19 +94,16 @@ class FrozenLakeEnv : public TimeLimitEnv<FrozenLakeEnvSpec> {
     }
     x_ = std::min(std::max(x_, 0), size_ - 1);
     y_ = std::min(std::max(y_, 0), size_ - 1);
-    WriteState(slippery ? 1.0f / 3 : 1.0f, slip);
+    WriteState(slippery ? 1.0f / 3 : 1.0f);
   }
 
  private:
-  void WriteState(float probability, int slip) {
+  void WriteState(float probability) {
     const char tile = map_[x_][y_];
     auto state =
         Transition(tile == 'G' ? 1.0f : 0.0f, tile == 'G' || tile == 'H');
     state["obs"_] = x_ * size_ + y_;
-    state["info:p"_] = probability;
-#ifdef ENVPOOL_TEST
-    state["info:slip"_] = slip;
-#endif
+    state["info:prob"_] = probability;
   }
 };
 

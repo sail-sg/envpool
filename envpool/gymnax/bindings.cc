@@ -76,15 +76,11 @@ struct Functions {
   template <class Config>
   static auto StateSpec(const Config& c) {
     const Task& t = Lookup(c["task"_]);
-    const int limit = c["max_episode_steps"_];
-    if (limit <= 0) {
-      throw std::invalid_argument("max_episode_steps must be positive");
-    }
     auto common = MakeDict(
 #ifdef ENVPOOL_TEST
         "info:hidden"_.Bind(Spec<float>({11})),
 #endif
-        "terminated"_.Bind(Spec<bool>({})));
+        TerminationSpec(c));
     if constexpr (std::is_same_v<Game, Snake>) {
       int rows = c["height"_];
       int cols = c["width"_];
@@ -99,7 +95,8 @@ struct Functions {
       return ConcatDict(common,
                         MakeDict("obs"_.Bind(Spec<int>(t.shape, {1, 11}))));
     } else {
-      return ConcatDict(common, MakeDict("obs"_.Bind(FloatSpec(t, limit))));
+      return ConcatDict(
+          common, MakeDict("obs"_.Bind(FloatSpec(t, c["max_episode_steps"_]))));
     }
   }
 
@@ -232,11 +229,8 @@ PYBIND11_MODULE(gymnax_envpool, m) {
   REGISTER(m, SnakeEnvSpec, SnakeEnvPool)
   REGISTER(m, FourRoomsEnvSpec, FourRoomsEnvPool)
   py::list tasks;
-  for (const auto& t : kShared) {
-    tasks.append(py::make_tuple(t.id, t.module, t.pool, t.limit));
-  }
   for (const auto& t : kTasks) {
-    tasks.append(py::make_tuple(t.id, "gymnax", t.pool, t.limit));
+    tasks.append(py::make_tuple(t.id, t.pool, t.limit));
   }
   m.attr("TASKS") = tasks;
 }

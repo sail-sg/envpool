@@ -19,6 +19,7 @@
 
 #include <memory>
 #include <random>
+#include <stdexcept>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -262,8 +263,16 @@ class Env {
   }
 };
 
-// Single-player tasks with independent termination and time-limit signals.
-// Their StateSpec includes "terminated" so both flags can be true on one step.
+// TimeLimitEnv tasks can terminate and reach the step limit on the same step.
+template <typename Config>
+auto TerminationSpec(const Config& conf) {
+  if (conf["max_episode_steps"_] <= 0) {
+    throw std::invalid_argument("max_episode_steps must be positive");
+  }
+  return "terminated"_.Bind(Spec<bool>({}));
+}
+
+// Single-player tasks that include TerminationSpec in their StateSpec.
 template <typename Spec>
 class TimeLimitEnv : public Env<Spec> {
  public:

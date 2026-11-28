@@ -13,40 +13,27 @@
 from contextlib import closing
 from typing import Any
 
-import gymnax
 import numpy as np
 from absl.testing import absltest, parameterized
 
 import envpool.gymnax.registration  # noqa: F401
-from envpool.gymnax.oracle import make_oracle, speeds
+from envpool.gymnax.oracle import TASK_IDS, make_oracle, speeds
 from envpool.python.seed_test_utils import check_seeded_rollouts
 from envpool.registration import make_gymnasium
 
 _FIXED = {"DeepSea", "DiscountingChain", "Pong", "SpaceInvaders"}
-_CASES = [(task.split("-")[0], task) for task in gymnax.registered_envs]
+_CASES = [(task.split("-")[0], task) for task in TASK_IDS]
 
 
 def _samples(name: str, pool: Any, ref: Any) -> np.ndarray:
     """One independent sample per slot. Scale bounded components to [0, 1]."""
     obs, info = pool.reset()
     n = len(obs)
-    h = info.get("hidden")
+    h = info["hidden"]
 
     def step(a: Any) -> Any:
         return pool.step(np.broadcast_to(a, (n,)).astype(np.int32))
 
-    if name == "CartPole":
-        return obs / 0.1 + 0.5
-    if name == "Acrobot":
-        return np.c_[info["state"], obs[:, 4:]] / 0.2 + 0.5
-    if name == "Pendulum":
-        return (
-            np.c_[np.arctan2(obs[:, 1], obs[:, 0]) / (2 * np.pi), obs[:, 2] / 2]
-            + 0.5
-        )
-    if name.startswith("MountainCar"):
-        assert (obs[:, 1] == 0).all()
-        return (obs[:, :1] + 0.6) / 0.2
     if name == "PointRobot":
         goal = h[:, :2]
         np.testing.assert_allclose(np.linalg.norm(goal, axis=1), 1, atol=1e-7)
@@ -75,11 +62,6 @@ def _samples(name: str, pool: Any, ref: Any) -> np.ndarray:
         assert not (obs[..., 1] * obs[..., 2]).any()
         heads, apples = (np.argwhere(obs[..., k])[:, 1:] for k in (1, 2))
         return np.c_[heads / 9, apples / 9, h[:, 0] / 3]
-    if name == "Catch":
-        for _ in range(9):
-            reward = step(1)[1]
-        np.testing.assert_array_equal(reward, 2 * obs[:, 0, 2] - 1)
-        return obs[:, 0].argmax(axis=1, keepdims=True) / 4
     if name == "MemoryChain":
         for t in range(6):
             reward = step(t % 2)[1]
@@ -122,8 +104,6 @@ def _samples(name: str, pool: Any, ref: Any) -> np.ndarray:
 
     # These tasks reset to fixed observations. Observe actual movement and
     # spawns under identical actions across all seeds, resets and slots.
-    if name == "FrozenLake":
-        return step(1)[0][:, None] == [0, 4, 1]
     if name == "FourRooms":
         pos = step(1)[0][:, :2]
         return (pos[:, None, :] == [[3, 1], [4, 2], [5, 1], [4, 1]]).all(
@@ -195,7 +175,6 @@ class _SamplingTest(parameterized.TestCase):
                 "BernoulliBandit": [0.5, 0.9, 0.1],
                 "Asterix": [0.5, 0.5, 1 / 3],
                 "Seaquest": [0.5, 0.5, 1 / 3, 0.5, 0.5],
-                "FrozenLake": [1 / 3, 1 / 3, 1 / 3],
                 "FourRooms": [1 / 9, 2 / 3, 1 / 9, 1 / 9],
             }
             self.assertGreaterEqual(values.min(), -1e-6)
@@ -204,7 +183,7 @@ class _SamplingTest(parameterized.TestCase):
                 values.mean(axis=0), means.get(name, 0.5), atol=0.08
             )
             self.assertGreater(values.std(axis=0).min(), 0.22)
-        if name in {"FrozenLake", "FourRooms"}:
+        if name == "FourRooms":
             np.testing.assert_array_equal(values.sum(axis=1), 1)
         elif values.shape[1] > 1:
             corr = np.corrcoef(values.T)

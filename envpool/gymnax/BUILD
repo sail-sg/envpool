@@ -77,8 +77,6 @@ py_library(
     deps = [
         ":gymnax",
         "//envpool:registration",
-        "//envpool/classic_control",
-        "//envpool/toy_text",
     ],
 )
 
@@ -98,7 +96,6 @@ py_test(
     deps = [
         ":oracle",
         ":registration",
-        "//envpool/classic_control:classic_control_registration",
         requirement("absl-py"),
     ],
 )

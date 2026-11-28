@@ -40,15 +40,6 @@ inline constexpr Color kColors6[] = {{0, 0, 0}, {26, 35, 65}, {27, 97, 68}, {104
 inline constexpr Color kColors7[] = {{0, 0, 0}, {26, 29, 59}, {21, 83, 75}, {67, 119, 48}, {161, 121, 74}, {211, 131, 169}, {198, 180, 237}, {203, 231, 239}};
 inline constexpr Color kColors10[] = {{0, 0, 0}, {25, 18, 43}, {23, 52, 75}, {23, 91, 72}, {60, 117, 50}, {126, 122, 53}, {187, 121, 102}, {212, 133, 175}, {202, 169, 230}, {193, 210, 243}, {213, 240, 238}};
 enum class Kind { Snake, Asterix, Breakout, Freeway, Seaquest, SpaceInvaders, DeepSea, MemoryChain, UmbrellaChain, DiscountingChain, MNISTBandit, SimpleBandit, FourRooms, MetaMaze, PointRobot, BernoulliBandit, GaussianBandit, Reacher, Swimmer, Pong };
-inline constexpr SharedTask kShared[] = {
-  {"CartPole-v1", "classic_control", "CartPole", 500},
-  {"Pendulum-v1", "classic_control", "Pendulum", 200},
-  {"Acrobot-v1", "classic_control", "Acrobot", 500},
-  {"MountainCar-v0", "classic_control", "MountainCar", 200},
-  {"MountainCarContinuous-v0", "classic_control", "MountainCarContinuous", 999},
-  {"Catch-bsuite", "toy_text", "Catch", 1000},
-  {"FrozenLake-misc", "toy_text", "FrozenLake", 100},
-};
 inline const Task kTasks[] = {
   {"Snake-misc", "Snake", Kind::Snake, 1000, {10, 10, 3}, 4, 0, 1, 0, {}, nullptr},
   {"Asterix-MinAtar", "Discrete", Kind::Asterix, 1000, {10, 10, 4}, 5, 0, 1, 0, {0, 1, 2, 3, 4}, kColors4},

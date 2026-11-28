@@ -29,13 +29,6 @@ enum class Kind;
 using Color = std::array<unsigned char, 3>;
 inline constexpr float kMax = std::numeric_limits<float>::max();
 
-struct SharedTask {
-  const char* id;
-  const char* module;
-  const char* pool;
-  int limit;
-};
-
 struct Task {
   const char* id;
   const char* pool;

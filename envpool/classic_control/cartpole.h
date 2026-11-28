@@ -38,7 +38,7 @@ class CartPoleEnvFns {
   static decltype(auto) StateSpec(const Config& conf) {
     float inf = std::numeric_limits<float>::infinity();
     return MakeDict(
-        "terminated"_.Bind(Spec<bool>({})),
+        TerminationSpec(conf),
         "obs"_.Bind(Spec<float>({4}, {{-4.8, -inf, -M_PI / 7.5, -inf},
                                       {4.8, inf, M_PI / 7.5, inf}})));
   }

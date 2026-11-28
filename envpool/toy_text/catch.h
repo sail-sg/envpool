@@ -40,7 +40,7 @@ class CatchEnvFns {
       throw std::invalid_argument(
           "Catch needs at least two rows and one column");
     }
-    return MakeDict("terminated"_.Bind(Spec<bool>({})),
+    return MakeDict(TerminationSpec(conf),
                     "obs"_.Bind(Spec<float>({conf["height"_], conf["width"_]},
                                             {0.0, 1.0})));
   }

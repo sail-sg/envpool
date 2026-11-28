@@ -37,7 +37,7 @@ class MountainCarContinuousEnvFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     return MakeDict(
-        "terminated"_.Bind(Spec<bool>({})),
+        TerminationSpec(conf),
         "obs"_.Bind(Spec<float>({2}, {{-1.2, -0.07}, {0.6, 0.07}})));
   }
   template <typename Config>

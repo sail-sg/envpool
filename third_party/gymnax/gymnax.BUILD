@@ -26,7 +26,6 @@ py_library(
         craftax_oracle_requirement("flax"),
         craftax_oracle_requirement("jax"),
         requirement("gymnasium"),
-        requirement("pygame-ce"),
         requirement("seaborn"),
     ],
 )

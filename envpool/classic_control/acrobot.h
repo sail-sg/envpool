@@ -35,7 +35,7 @@ class AcrobotEnvFns {
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("terminated"_.Bind(Spec<bool>({})),
+    return MakeDict(TerminationSpec(conf),
                     "obs"_.Bind(Spec<float>(
                         {6}, {{-1.0, -1.0, -1.0, -1.0, -4 * M_PI, -9 * M_PI},
                               {1.0, 1.0, 1.0, 1.0, 4 * M_PI, 9 * M_PI}})),

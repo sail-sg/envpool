@@ -24,14 +24,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 from gymnax.environments.misc import meta_maze, point_robot
 from gymnax.utils import load_mnist
-from gymnax.visualize import (
-    vis_catch,
-    vis_circle,
-    vis_gym,
-    vis_maze,
-    vis_minatar,
-)
+from gymnax.visualize import vis_circle, vis_maze, vis_minatar
+from gymnax.visualize.vis_gym import SUPPORTED_GYM_ENVS
 from matplotlib.backends.backend_agg import FigureCanvasAgg
+
+# Classic control and toy text already provide these tasks under their own IDs.
+_EXISTING = {*SUPPORTED_GYM_ENVS, "Catch-bsuite", "FrozenLake-misc"}
+TASK_IDS = tuple(
+    name for name in gymnax.registered_envs if name not in _EXISTING
+)
 
 
 def first_slot(info: dict) -> dict:
@@ -57,23 +58,11 @@ def speeds(obs: np.ndarray) -> np.ndarray:
     return ((1 + trails % 5) * direction).astype(np.int32)
 
 
-def joint_state(name: str, s: Any, obs: np.ndarray, info: dict) -> Any:
-    """Set the pendulum or acrobot joint angles and velocities."""
-    if name == "Acrobot-v1":
-        return s.replace(
-            joint_angle1=info["state"][0],
-            joint_angle2=info["state"][1],
-            velocity_1=obs[4],
-            velocity_2=obs[5],
-        )
-    return s.replace(theta=np.arctan2(obs[1], obs[0]), theta_dot=obs[2])
-
-
 def synchronize(env: Any, p: Any, obs: np.ndarray, info: dict) -> Any:
     """Transfer only the randomized parts of a reset and check its observation."""
     name = env.name.split("-")[0]
     key = jax.random.key(0)
-    h: Any = info.get("hidden")
+    h = info["hidden"]
     if name == "MNISTBandit":
         with patch.object(jax.random, "randint", return_value=jnp.int32(h[0])):
             image, state = env.reset_env(key, p)
@@ -81,15 +70,7 @@ def synchronize(env: Any, p: Any, obs: np.ndarray, info: dict) -> Any:
         return state
 
     _, s = env.reset(key, p)
-    if name == "CartPole":
-        s = s.replace(x=obs[0], x_dot=obs[1], theta=obs[2], theta_dot=obs[3])
-    elif name in {"Acrobot", "Pendulum"}:
-        s = joint_state(env.name, s, obs, info)
-    elif name.startswith("MountainCar"):
-        s = s.replace(position=obs[0])
-    elif name == "Catch":
-        s = s.replace(ball_x=np.int32(obs[0].argmax()))
-    elif name == "Breakout":
+    if name == "Breakout":
         x = np.int32(obs[3, :, 1].argmax())
         s = s.replace(ball_x=x, last_x=x, ball_dir=np.int32(2 if x == 0 else 3))
     elif name == "Freeway":
@@ -177,13 +158,6 @@ def stepper(env: Any, p: Any) -> Callable[..., Any]:
                 )
             elif name == "PointRobot":
                 use(point_robot, "sample_agent_position", return_value=h)
-            elif name == "FrozenLake":
-                use(
-                    jax.random,
-                    "uniform",
-                    return_value=jnp.where(h == 0, 0.0, 0.5),
-                )
-                use(jax.random, "choice", return_value=h)
             elif name == "FourRooms":
                 use(
                     jax.random,
@@ -211,17 +185,14 @@ def stepper(env: Any, p: Any) -> Callable[..., Any]:
             sample = np.argwhere(obs[:, :, 2])[0].astype(np.int32)
         elif name == "PointRobot":
             sample = obs[:2]
-        elif name == "FrozenLake":
-            sample = info["slip"]
         else:
-            sample = info.get("hidden")
+            sample = info["hidden"]
         return step(s, a, sample)
 
     return compare_step
 
 
 _RENDERERS = {
-    "Catch-bsuite": vis_catch.init_catch,
     "FourRooms-misc": vis_maze.init_maze,
     "MetaMaze-misc": vis_maze.init_maze,
     "PointRobot-misc": vis_circle.init_circle,
@@ -231,17 +202,11 @@ _RENDERERS = {
 
 def renderable(name: str) -> bool:
     """Return whether Gymnax's Visualizer supports this task."""
-    return (
-        name in vis_gym.SUPPORTED_GYM_ENVS
-        or name.endswith("-MinAtar")
-        or name in _RENDERERS
-    )
+    return name.endswith("-MinAtar") or name in _RENDERERS
 
 
 def frame(env: Any, p: Any, state: Any, height: int, width: int) -> np.ndarray:
     """Render the scene without the Visualizer's score or animation margins."""
-    if env.name in vis_gym.SUPPORTED_GYM_ENVS:
-        return vis_gym.render_gym_frame(env.name, state, p)
     figure = plt.figure(figsize=(width / 100, height / 100), dpi=100)
     try:
         ax = figure.add_axes((0, 0, 1, 1))

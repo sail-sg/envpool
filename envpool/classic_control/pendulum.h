@@ -34,7 +34,7 @@ class PendulumEnvFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     return MakeDict(
-        "terminated"_.Bind(Spec<bool>({})),
+        TerminationSpec(conf),
         "obs"_.Bind(Spec<float>({3}, {{-1.0, -1.0, -8.0}, {1.0, 1.0, 8.0}})));
   }
   template <typename Config>
