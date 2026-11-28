@@ -14,11 +14,11 @@
 """Unit tests for classic control environments."""
 
 from collections import deque
+from contextlib import closing
 from typing import Any, cast, no_type_check
 
 import gymnasium as gym
 import numpy as np
-from absl import logging
 from absl.testing import absltest, parameterized
 from dm_env import TimeStep
 
@@ -115,55 +115,29 @@ class _ToyTextEnvTest(parameterized.TestCase):
                 else:
                     assert np.all(rew == -1) and np.all(done)
 
-    @no_type_check
-    def test_frozen_lake(self) -> None:
-        for size in [4, 8]:
-            if size == 4:
-                env = make_gymnasium("FrozenLake-v1")
-                ref = gym.make("FrozenLake-v1")
-            else:
-                env = make_gymnasium("FrozenLake8x8-v1")
-                ref = gym.make("FrozenLake8x8-v1")
-            logging.info(env)
-            assert isinstance(env.observation_space, gym.spaces.Discrete)
-            assert env.observation_space.n == size * size
-            assert isinstance(env.action_space, gym.spaces.Discrete)
-            assert env.action_space.n == 4
-            last_obs, _ = env.reset()
-            elapsed_step = 0
-            for _ in range(1000):
-                act = np.random.randint(4, size=(1,))
-                obs, rew, terminated, truncated, info = env.step(act)
-                done = np.logical_or(terminated, truncated)
-                flag = False
-                for _ in range(50):
-                    ref.reset()
-                    ref._elapsed_steps = elapsed_step
-                    ref.unwrapped.s = int(last_obs[0])
-                    (
-                        ref_obs,
-                        ref_rew,
-                        ref_terminated,
-                        ref_truncated,
-                        ref_info,
-                    ) = ref.step(int(act[0]))
-                    ref_done = np.logical_or(ref_terminated, ref_truncated)
-                    if ref_obs == obs[0]:
-                        if ref_rew == rew[0] and ref_done == done[0]:
-                            flag = True
-                        else:
-                            logging.info(
-                                f"At step {elapsed_step}, action {act}, {last_obs} -> {obs}, "
-                                f"ref: {ref_obs}, {ref_rew}, {ref_done}, {ref_info}, "
-                                f"but got {obs}, {rew}, {done}, {info}"
-                            )
-                            break
-                assert flag
-                last_obs = obs
-                elapsed_step += 1
-                if done:
-                    elapsed_step = 0
-                    last_obs, _ = env.reset()
+    def test_catch_render(self) -> None:
+        rows, cols = 4, 3
+        with closing(
+            make_gymnasium(
+                "Catch-v0",
+                height=rows,
+                width=cols,
+                num_envs=3,
+                render_mode="rgb_array",
+            )
+        ) as env:
+            obs, _ = env.reset()
+            for t in range(rows):
+                if t:
+                    obs = env.step(np.arange(3))[0]
+                frames = env.render(env_ids=[2, 0])
+                assert frames is not None
+                self.assertEqual(frames.shape, (2, rows * 40, cols * 40, 3))
+                self.assertEqual(frames.dtype, np.uint8)
+                cells = frames.reshape(2, rows, 40, cols, 40, 3)
+                np.testing.assert_array_equal(
+                    (cells < 255).any(axis=(2, 4, 5)), obs[[2, 0]]
+                )
 
     @no_type_check
     def test_taxi(self) -> None:
@@ -384,40 +358,49 @@ class _ToyTextEnvTest(parameterized.TestCase):
                 if ref_done:
                     break
 
-    def test_cliffwalking_slippery(self) -> None:
-        env = make_gymnasium("CliffWalkingSlippery-v1", seed=0)
-        ref = gym.make("CliffWalkingSlippery-v1")
-        obs, info = env.reset()
-        np.testing.assert_allclose(info["prob"], 1.0)
-        current_state = int(obs[0])
-        actions = np.random.default_rng(0).integers(0, 4, size=200)
-        for action in actions:
-            obs, rew, terminated, truncated, info = env.step(
-                np.array([action], dtype=np.int32)
-            )
-            transition = (
-                round(float(info["prob"][0]), 6),
-                int(obs[0]),
-                float(rew[0]),
-                bool(terminated[0]),
-                bool(truncated[0]),
-            )
-            valid = {
-                (round(prob, 6), next_state, reward, terminated_flag, False)
-                for prob, next_state, reward, terminated_flag in cast(
-                    Any, ref.unwrapped
-                ).P[current_state][action]
-            }
-            assert transition in valid, (
-                current_state,
-                action,
-                transition,
-                sorted(valid),
-            )
-            if transition[3] or transition[4]:
-                obs, info = env.reset()
-                np.testing.assert_allclose(info["prob"], 1.0)
-            current_state = int(obs[0])
+    @parameterized.named_parameters(
+        ("CliffWalkingSlippery", "CliffWalkingSlippery-v1", {}),
+        ("FrozenLake", "FrozenLake-v1", {}),
+        ("FrozenLake8x8", "FrozenLake8x8-v1", {}),
+        (
+            "FrozenLake_deterministic",
+            "FrozenLake-v1",
+            {"is_slippery": False, "max_episode_steps": 6},
+        ),
+    )
+    def test_grid_transitions(self, task_id: str, options: dict) -> None:
+        with (
+            closing(make_gymnasium(task_id, seed=0, **options)) as env,
+            closing(gym.make(task_id, **options)) as ref,
+        ):
+            self.assertEqual(env.observation_space, ref.observation_space)
+            self.assertEqual(env.action_space, ref.action_space)
+            assert ref.spec is not None
+            limit = ref.spec.max_episode_steps
+            transitions = cast(Any, ref.unwrapped).P
+            start, reset_info = ref.reset()
+            # On the deterministic lake, enter a hole, then reach the goal
+            # exactly at the six-step limit in the next episode.
+            actions = [1, 2, 1, 1, 2, 1, 2, 2]
+            actions.extend(np.random.default_rng(0).integers(4, size=1000))
+            elapsed = 0
+            for action in actions:
+                if elapsed == 0:
+                    obs, info = env.reset()
+                    self.assertEqual(obs[0], start)
+                    self.assertEqual(info["prob"][0], reset_info["prob"])
+                valid = [
+                    (np.float32(p), s, r, end)
+                    for p, s, r, end in transitions[int(obs[0])][action]
+                ]
+                obs, reward, term, trunc, info = env.step(np.array([action]))
+                self.assertIn(
+                    (info["prob"][0], obs[0], reward[0], term[0]), valid
+                )
+                elapsed += 1
+                self.assertEqual(trunc[0], elapsed == limit)
+                if term[0] or trunc[0]:
+                    elapsed = 0
 
     def test_blackjack(self) -> None:
         np.random.seed(0)

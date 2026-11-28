@@ -18,6 +18,7 @@ import envpool.box2d.registration  # noqa: F401
 import envpool.classic_control.registration  # noqa: F401
 import envpool.craftax.registration  # noqa: F401
 import envpool.gfootball.registration  # noqa: F401
+import envpool.gymnax.registration  # noqa: F401
 import envpool.highway.registration  # noqa: F401
 import envpool.jumanji.registration  # noqa: F401
 import envpool.marlgrid.registration  # noqa: F401

@@ -19,6 +19,7 @@
 
 #include <memory>
 #include <random>
+#include <stdexcept>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -200,6 +201,8 @@ class Env {
   virtual bool IsDone() { throw std::runtime_error("is_done not implemented"); }
 
  protected:
+  int CurrentStep() const { return current_step_; }
+
   // Same-step autoreset implementations publish the terminal transition before
   // restarting this counter for the next external action.
   void ResetStepCount() { current_step_ = 0; }
@@ -258,6 +261,36 @@ class Env {
         spec_.state_spec.AllValues());
     return state;
   }
+};
+
+// TimeLimitEnv tasks can terminate and reach the step limit on the same step.
+template <typename Config>
+auto TerminationSpec(const Config& conf) {
+  if (conf["max_episode_steps"_] <= 0) {
+    throw std::invalid_argument("max_episode_steps must be positive");
+  }
+  return "terminated"_.Bind(Spec<bool>({}));
+}
+
+// Single-player tasks that include TerminationSpec in their StateSpec.
+template <typename Spec>
+class TimeLimitEnv : public Env<Spec> {
+ public:
+  using Env<Spec>::Env;
+  bool IsDone() override { return done_; }
+
+ protected:
+  auto Transition(float reward, bool terminated) {
+    done_ = terminated || this->CurrentStep() >= this->CurrentMaxEpisodeSteps();
+    auto state = this->Allocate();
+    state["reward"_] = reward;
+    state["terminated"_] = terminated;
+    state["discount"_] = terminated ? 0.0f : 1.0f;
+    return state;
+  }
+
+ private:
+  bool done_{true};
 };
 
 #endif  // ENVPOOL_CORE_ENV_H_

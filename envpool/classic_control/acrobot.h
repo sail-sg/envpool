@@ -35,7 +35,8 @@ class AcrobotEnvFns {
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
-    return MakeDict("obs"_.Bind(Spec<float>(
+    return MakeDict(TerminationSpec(conf),
+                    "obs"_.Bind(Spec<float>(
                         {6}, {{-1.0, -1.0, -1.0, -1.0, -4 * M_PI, -9 * M_PI},
                               {1.0, 1.0, 1.0, 1.0, 4 * M_PI, 9 * M_PI}})),
                     "info:state"_.Bind(Spec<float>({2})));
@@ -48,7 +49,7 @@ class AcrobotEnvFns {
 
 using AcrobotEnvSpec = EnvSpec<AcrobotEnvFns>;
 
-class AcrobotEnv : public Env<AcrobotEnvSpec>, public RenderableEnv {
+class AcrobotEnv : public TimeLimitEnv<AcrobotEnvSpec>, public RenderableEnv {
   struct V5 {
     double s0{0}, s1{0}, s2{0}, s3{0}, s4{0};
     V5() = default;
@@ -73,19 +74,13 @@ class AcrobotEnv : public Env<AcrobotEnvSpec>, public RenderableEnv {
   const double kMaxVel2 = 9 * M_PI;
   const double kInitRange = 0.1;
 
-  int max_episode_steps_, elapsed_step_;
   V5 s_;
   std::uniform_real_distribution<> dist_;
-  bool done_{true};
 
  public:
   AcrobotEnv(const Spec& spec, int env_id)
-      : Env<AcrobotEnvSpec>(spec, env_id),
-        max_episode_steps_(spec.config["max_episode_steps"_]),
-        elapsed_step_(max_episode_steps_ + 1),
+      : TimeLimitEnv<AcrobotEnvSpec>(spec, env_id),
         dist_(-kInitRange, kInitRange) {}
-
-  bool IsDone() override { return done_; }
 
   std::pair<int, int> RenderSize(int width, int height) const override {
     return {width > 0 ? width : 500, height > 0 ? height : 500};
@@ -97,15 +92,11 @@ class AcrobotEnv : public Env<AcrobotEnvSpec>, public RenderableEnv {
     s_.s2 = dist_(gen_);
     s_.s3 = dist_(gen_);
     s_.s4 = 0;
-    done_ = false;
-    elapsed_step_ = 0;
     WriteState(0.0);
   }
 
   void Step(const Action& action) override {
-    done_ = (++elapsed_step_ >= max_episode_steps_);
     int act = action["action"_];
-    float reward = -1.0;
 
     s_.s4 = act - 1;
     s_ = Rk4(s_);
@@ -133,12 +124,8 @@ class AcrobotEnv : public Env<AcrobotEnvSpec>, public RenderableEnv {
     if (s_.s3 > kMaxVel2) {
       s_.s3 = kMaxVel2;
     }
-    if (-std::cos(s_.s0) - std::cos(s_.s0 + s_.s1) > 1) {
-      done_ = true;
-      reward = 0.0;
-    }
-
-    WriteState(reward);
+    const bool success = -std::cos(s_.s0) - std::cos(s_.s0 + s_.s1) > 1;
+    WriteState(success ? 0.0f : -1.0f, success);
   }
 
   void Render(int width, int height, int /*camera_id*/,
@@ -177,8 +164,8 @@ class AcrobotEnv : public Env<AcrobotEnvSpec>, public RenderableEnv {
     return {dtheta1, dtheta2, ddtheta1, ddtheta2, 0};
   }
 
-  void WriteState(float reward) {
-    auto state = Allocate();
+  void WriteState(float reward, bool terminated = false) {
+    auto state = Transition(reward, terminated);
     state["obs"_][0] = static_cast<float>(std::cos(s_.s0));
     state["obs"_][1] = static_cast<float>(std::sin(s_.s0));
     state["obs"_][2] = static_cast<float>(std::cos(s_.s1));
@@ -187,7 +174,6 @@ class AcrobotEnv : public Env<AcrobotEnvSpec>, public RenderableEnv {
     state["obs"_][5] = static_cast<float>(s_.s3);
     state["info:state"_][0] = static_cast<float>(s_.s0);
     state["info:state"_][1] = static_cast<float>(s_.s1);
-    state["reward"_] = reward;
   }
 };
 

@@ -13,6 +13,7 @@
 # limitations under the License.
 """Unit tests for classic control environments."""
 
+from contextlib import closing
 from typing import Any, cast, no_type_check
 
 import gymnasium as gym
@@ -128,6 +129,30 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
         for task_id in ("Pendulum-v0", "Pendulum-v1"):
             self.run_deterministic_check(task_id)
 
+    def test_pendulum_speed_limit(self) -> None:
+        for version in (0, 1):
+            with closing(
+                make_gym(f"Pendulum-v{version}", num_envs=4, seed=10)
+            ) as env:
+                obs, _ = env.reset()
+                for _ in range(200):
+                    torque = np.copysign(2, obs[:, 2:])
+                    prev = np.arctan2(obs[:, 1], obs[:, 0])
+                    obs = env.step(torque)[0]
+                    hit = np.abs(obs[:, 2]) == 8
+                    if hit.any():
+                        angle = np.arctan2(obs[:, 1], obs[:, 0])
+                        delta = (angle - prev + np.pi) % (2 * np.pi) - np.pi
+                        if version == 1:
+                            np.testing.assert_allclose(
+                                delta[hit], 0.05 * obs[hit, 2], atol=1e-6
+                            )
+                        else:
+                            self.assertTrue((np.abs(delta[hit]) > 0.4).all())
+                        break
+                else:
+                    self.fail("Pendulum did not reach the speed limit")
+
     def test_mountain_car(self) -> None:
         self.run_deterministic_check("MountainCar-v0")
         self.run_deterministic_check("MountainCarContinuous-v0")
@@ -147,6 +172,26 @@ class _ClassicControlEnvPoolTest(absltest.TestCase):
         env1 = make_gym("MountainCarContinuous-v0")
         self.run_space_check(env0, env1)
         self.run_align_check(env0, env1, reset_fn)
+
+    def test_continuous_mountain_car_wall(self) -> None:
+        name = "MountainCarContinuous-v0"
+        with (
+            closing(make_gym(name)) as default,
+            closing(make_gym(name, stop_at_left_wall=False)) as sliding,
+        ):
+            obs, _ = default.reset()
+            np.testing.assert_array_equal(obs, sliding.reset()[0])
+            for _ in range(200):
+                action = np.copysign(1, obs[:, 1:])
+                obs = default.step(action)[0]
+                other = sliding.step(action)[0]
+                if obs[0, 0] == np.float32(-1.2):
+                    self.assertEqual(other[0, 0], obs[0, 0])
+                    self.assertEqual(obs[0, 1], 0)
+                    self.assertLess(other[0, 1], 0)
+                    return
+                np.testing.assert_array_equal(obs, other)
+            self.fail("Trajectory missed the left wall")
 
     def test_acrobot(self) -> None:
         self.run_deterministic_check("Acrobot-v1")

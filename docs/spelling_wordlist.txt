@@ -71,6 +71,8 @@ Reacher
 golang
 uncomment
 Brax
+Gymnax
+MinAtar
 Homebrew
 macOS
 Procgen

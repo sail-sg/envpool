@@ -47,8 +47,9 @@ The inverted pendulum swing-up problem is a classic problem in the control
 literature. In this version of the problem, the pendulum starts in a random
 position, and the goal is to swing it up to stay upright.
 
-You can find the difference between ``Pendulum-v0`` and ``Pendulum-v1`` in
-`this pull request <https://github.com/openai/gym/pull/2423>`_.
+``Pendulum-v1`` limits angular speed before updating the angle.
+``Pendulum-v0`` applies the limit after updating the angle.
+See the `upstream change <https://github.com/openai/gym/pull/2423>`_.
 
 
 MountainCar-v0, MountainCarContinuous-v0
@@ -61,6 +62,9 @@ and `gymnasium mountain_car continuous source code
 
 The agent (a car) is started at the bottom of a valley. For any given state the
 agent may choose to accelerate to the left, right or cease any acceleration.
+
+``MountainCarContinuous-v0`` stops at the left wall by default. Pass
+``stop_at_left_wall=False`` to retain the negative velocity as in Gymnax.
 
 
 Acrobot-v1

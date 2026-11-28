@@ -34,6 +34,7 @@ class PendulumEnvFns {
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     return MakeDict(
+        TerminationSpec(conf),
         "obs"_.Bind(Spec<float>({3}, {{-1.0, -1.0, -8.0}, {1.0, 1.0, 8.0}})));
   }
   template <typename Config>
@@ -44,31 +45,25 @@ class PendulumEnvFns {
 
 using PendulumEnvSpec = EnvSpec<PendulumEnvFns>;
 
-class PendulumEnv : public Env<PendulumEnvSpec>, public RenderableEnv {
+class PendulumEnv : public TimeLimitEnv<PendulumEnvSpec>, public RenderableEnv {
  protected:
   const double kMaxSpeed = 8;
   const double kMaxTorque = 2;
   const double kDt = 0.05;
   const double kGravity = 10;
 
-  int max_episode_steps_, elapsed_step_;
   int version_;
   double theta_, theta_dot_;
   bool has_last_u_{false};
   double last_u_{0.0};
   std::uniform_real_distribution<> dist_, dist_dot_;
-  bool done_{true};
 
  public:
   PendulumEnv(const Spec& spec, int env_id)
-      : Env<PendulumEnvSpec>(spec, env_id),
-        max_episode_steps_(spec.config["max_episode_steps"_]),
-        elapsed_step_(max_episode_steps_ + 1),
+      : TimeLimitEnv<PendulumEnvSpec>(spec, env_id),
         version_(spec.config["version"_]),
         dist_(-M_PI, M_PI),
         dist_dot_(-1, 1) {}
-
-  bool IsDone() override { return done_; }
 
   std::pair<int, int> RenderSize(int width, int height) const override {
     return {width > 0 ? width : 500, height > 0 ? height : 500};
@@ -79,13 +74,10 @@ class PendulumEnv : public Env<PendulumEnvSpec>, public RenderableEnv {
     theta_dot_ = dist_dot_(gen_);
     has_last_u_ = false;
     last_u_ = 0.0;
-    done_ = false;
-    elapsed_step_ = 0;
     WriteState(0.0);
   }
 
   void Step(const Action& action) override {
-    done_ = (++elapsed_step_ >= max_episode_steps_);
     float act = action["action"_];
     double u = act;
     if (act < -kMaxTorque) {
@@ -109,7 +101,7 @@ class PendulumEnv : public Env<PendulumEnvSpec>, public RenderableEnv {
       theta_dot_ = kMaxSpeed;
     }
     if (version_ == 1) {
-      theta_ += new_theta_dot * kDt;
+      theta_ += theta_dot_ * kDt;
     }
     while (theta_ < -M_PI) {
       theta_ += M_PI * 2;
@@ -127,11 +119,10 @@ class PendulumEnv : public Env<PendulumEnvSpec>, public RenderableEnv {
 
  private:
   void WriteState(float reward) {
-    auto state = Allocate();
+    auto state = Transition(reward, false);
     state["obs"_][0] = static_cast<float>(std::cos(theta_));
     state["obs"_][1] = static_cast<float>(std::sin(theta_));
     state["obs"_][2] = static_cast<float>(theta_dot_);
-    state["reward"_] = reward;
   }
 };
 

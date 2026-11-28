@@ -31,11 +31,13 @@ namespace classic_control {
 class MountainCarContinuousEnvFns {
  public:
   static decltype(auto) DefaultConfig() {
-    return MakeDict("reward_threshold"_.Bind(90.0));
+    return MakeDict("reward_threshold"_.Bind(90.0),
+                    "stop_at_left_wall"_.Bind(true));
   }
   template <typename Config>
   static decltype(auto) StateSpec(const Config& conf) {
     return MakeDict(
+        TerminationSpec(conf),
         "obs"_.Bind(Spec<float>({2}, {{-1.2, -0.07}, {0.6, 0.07}})));
   }
   template <typename Config>
@@ -46,8 +48,9 @@ class MountainCarContinuousEnvFns {
 
 using MountainCarContinuousEnvSpec = EnvSpec<MountainCarContinuousEnvFns>;
 
-class MountainCarContinuousEnv : public Env<MountainCarContinuousEnvSpec>,
-                                 public RenderableEnv {
+class MountainCarContinuousEnv
+    : public TimeLimitEnv<MountainCarContinuousEnvSpec>,
+      public RenderableEnv {
  protected:
   const double kMinPos = -1.2;
   const double kMaxPos = 0.6;
@@ -56,19 +59,13 @@ class MountainCarContinuousEnv : public Env<MountainCarContinuousEnvSpec>,
   const double kGoalPos = 0.45;
   const double kGoalVel = 0;
   const double kGravity = 0.0025;
-  int max_episode_steps_, elapsed_step_;
   double pos_, vel_;
   std::uniform_real_distribution<> dist_;
-  bool done_{true};
 
  public:
   MountainCarContinuousEnv(const Spec& spec, int env_id)
-      : Env<MountainCarContinuousEnvSpec>(spec, env_id),
-        max_episode_steps_(spec.config["max_episode_steps"_]),
-        elapsed_step_(max_episode_steps_ + 1),
+      : TimeLimitEnv<MountainCarContinuousEnvSpec>(spec, env_id),
         dist_(-0.6, -0.4) {}
-
-  bool IsDone() override { return done_; }
 
   std::pair<int, int> RenderSize(int width, int height) const override {
     return {width > 0 ? width : 600, height > 0 ? height : 400};
@@ -77,13 +74,10 @@ class MountainCarContinuousEnv : public Env<MountainCarContinuousEnvSpec>,
   void Reset() override {
     pos_ = dist_(gen_);
     vel_ = 0.0;
-    done_ = false;
-    elapsed_step_ = 0;
     WriteState(0.0);
   }
 
   void Step(const Action& action) override {
-    done_ = (++elapsed_step_ >= max_episode_steps_);
     double act = static_cast<float>(action["action"_]);
     double reward = -0.1 * act * act;
     if (act < -1) {
@@ -103,14 +97,11 @@ class MountainCarContinuousEnv : public Env<MountainCarContinuousEnvSpec>,
     } else if (pos_ > kMaxPos) {
       pos_ = kMaxPos;
     }
-    if (pos_ == kMinPos && vel_ < 0) {
+    if (spec_.config["stop_at_left_wall"_] && pos_ == kMinPos && vel_ < 0) {
       vel_ = 0;
     }
-    if (pos_ >= kGoalPos && vel_ >= kGoalVel) {
-      done_ = true;
-      reward += 100;
-    }
-    WriteState(static_cast<float>(reward));
+    const bool success = pos_ >= kGoalPos && vel_ >= kGoalVel;
+    WriteState(static_cast<float>(reward + (success ? 100 : 0)), success);
   }
 
   void Render(int width, int height, int /*camera_id*/,
@@ -119,11 +110,10 @@ class MountainCarContinuousEnv : public Env<MountainCarContinuousEnvSpec>,
   }
 
  private:
-  void WriteState(float reward) {
-    auto state = Allocate();
+  void WriteState(float reward, bool terminated = false) {
+    auto state = Transition(reward, terminated);
     state["obs"_][0] = static_cast<float>(pos_);
     state["obs"_][1] = static_cast<float>(vel_);
-    state["reward"_] = reward;
   }
 };
 

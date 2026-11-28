@@ -17,6 +17,12 @@ load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
+    name = "grid_render",
+    hdrs = ["grid_render.h"],
+    deps = ["@opencv"],
+)
+
+cc_library(
     name = "image_process",
     hdrs = ["image_process.h"],
     deps = [

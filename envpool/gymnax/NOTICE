@@ -1,0 +1,12 @@
+Native adaptation of Gymnax 1.1.0 by Robert Tjarko Lange and contributors,
+licensed under the Apache License 2.0. See LICENSE and
+https://github.com/RobertTLange/gymnax/tree/b88dd87ca3917f1723d14016f0b1c9719e893d77.
+
+The MNIST Database of Handwritten Digits
+Yann LeCun, Corinna Cortes and Christopher J. C. Burges
+Copyright 1998 Yann LeCun and Corinna Cortes.
+The two unmodified training files are distributed under the Creative Commons
+Attribution-ShareAlike 3.0 license (https://creativecommons.org/licenses/by-sa/3.0/).
+http://yann.lecun.com/exdb/mnist/
+https://github.com/cvdfoundation/mnist
+https://keras.io/api/datasets/mnist/
